@@ -8,99 +8,6 @@ export function InspectionProvider({ children }) {
   const [inspections, setInspections] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Checklist templates based on property type
-  const checklistTemplates = {
-    residential: [
-      {
-        category: "Exterior",
-        items: [
-          { id: "ext_1", text: "Roof condition and gutters", required: true },
-          { id: "ext_2", text: "Siding and exterior walls", required: true },
-          { id: "ext_3", text: "Windows and doors", required: true },
-          { id: "ext_4", text: "Walkways and driveways", required: false },
-          { id: "ext_5", text: "Landscaping and drainage", required: false },
-        ],
-      },
-      {
-        category: "Interior",
-        items: [
-          { id: "int_1", text: "Flooring condition", required: true },
-          { id: "int_2", text: "Wall and ceiling condition", required: true },
-          { id: "int_3", text: "Lighting fixtures", required: true },
-          { id: "int_4", text: "Doors and hardware", required: false },
-          { id: "int_5", text: "Window treatments", required: false },
-        ],
-      },
-      {
-        category: "Kitchen",
-        items: [
-          { id: "kit_1", text: "Appliances functionality", required: true },
-          { id: "kit_2", text: "Cabinets and countertops", required: true },
-          { id: "kit_3", text: "Plumbing fixtures", required: true },
-          { id: "kit_4", text: "Electrical outlets", required: true },
-        ],
-      },
-      {
-        category: "Bathrooms",
-        items: [
-          { id: "bath_1", text: "Toilet functionality", required: true },
-          { id: "bath_2", text: "Shower/tub condition", required: true },
-          { id: "bath_3", text: "Sink and faucets", required: true },
-          { id: "bath_4", text: "Ventilation", required: true },
-          { id: "bath_5", text: "Tile and grout condition", required: false },
-        ],
-      },
-      {
-        category: "Safety & Systems",
-        items: [
-          { id: "safe_1", text: "Smoke detectors", required: true },
-          { id: "safe_2", text: "Carbon monoxide detectors", required: true },
-          { id: "safe_3", text: "HVAC system", required: true },
-          { id: "safe_4", text: "Electrical panel", required: true },
-          { id: "safe_5", text: "Water heater", required: true },
-        ],
-      },
-    ],
-    commercial: [
-      {
-        category: "Building Exterior",
-        items: [
-          { id: "com_ext_1", text: "Structural integrity", required: true },
-          { id: "com_ext_2", text: "Parking lot condition", required: true },
-          { id: "com_ext_3", text: "Signage and lighting", required: false },
-          { id: "com_ext_4", text: "Loading dock areas", required: false },
-        ],
-      },
-      {
-        category: "Interior Spaces",
-        items: [
-          { id: "com_int_1", text: "Common areas", required: true },
-          { id: "com_int_2", text: "Office spaces", required: true },
-          { id: "com_int_3", text: "Restroom facilities", required: true },
-          { id: "com_int_4", text: "Storage areas", required: false },
-        ],
-      },
-      {
-        category: "Safety & Compliance",
-        items: [
-          { id: "com_safe_1", text: "Fire safety systems", required: true },
-          { id: "com_safe_2", text: "Emergency exits", required: true },
-          { id: "com_safe_3", text: "ADA compliance", required: true },
-          { id: "com_safe_4", text: "Security systems", required: false },
-        ],
-      },
-      {
-        category: "Mechanical Systems",
-        items: [
-          { id: "com_mech_1", text: "HVAC systems", required: true },
-          { id: "com_mech_2", text: "Electrical systems", required: true },
-          { id: "com_mech_3", text: "Plumbing systems", required: true },
-          { id: "com_mech_4", text: "Elevator systems", required: false },
-        ],
-      },
-    ],
-  }
-
   useEffect(() => {
     // Load mock inspections data
     const mockInspections = [
@@ -108,22 +15,24 @@ export function InspectionProvider({ children }) {
         id: 1,
         propertyId: 1,
         propertyName: "Sunset Apartments",
-        inspectorName: "John Smith",
-        status: "completed",
+        propertyType: "Residential",
+        inspectorName: "Jane Smith",
         startDate: "2024-01-15",
         completedDate: "2024-01-15",
+        status: "completed",
         progress: 100,
         checklist: {},
-        notes: "Property in excellent condition. Minor repairs needed in unit 12.",
+        notes: "Property in good condition overall.",
       },
       {
         id: 2,
         propertyId: 2,
         propertyName: "Commerce Plaza",
-        inspectorName: "Sarah Johnson",
-        status: "in-progress",
+        propertyType: "Commercial",
+        inspectorName: "Mike Johnson",
         startDate: "2024-02-01",
         completedDate: null,
+        status: "in-progress",
         progress: 65,
         checklist: {},
         notes: "",
@@ -145,16 +54,15 @@ export function InspectionProvider({ children }) {
       id: Date.now(),
       propertyId,
       propertyName,
-      propertyType: propertyType.toLowerCase(),
+      propertyType,
       inspectorName,
-      status: "in-progress",
       startDate: new Date().toISOString().split("T")[0],
       completedDate: null,
+      status: "in-progress",
       progress: 0,
       checklist: {},
       notes: "",
     }
-
     const updatedInspections = [...inspections, newInspection]
     setInspections(updatedInspections)
     localStorage.setItem("inspections", JSON.stringify(updatedInspections))
@@ -162,26 +70,85 @@ export function InspectionProvider({ children }) {
   }
 
   const updateInspection = (id, updates) => {
-    const updatedInspections = inspections.map((inspection) =>
-      inspection.id === id ? { ...inspection, ...updates } : inspection,
-    )
+    const updatedInspections = inspections.map((inspection) => {
+      if (inspection.id === id) {
+        const updated = { ...inspection, ...updates }
+        // Ensure progress is recalculated if checklist is updated
+        if (updates.checklist) {
+          updated.progress = calculateProgress(updates.checklist, inspection.propertyType)
+        }
+        return updated
+      }
+      return inspection
+    })
     setInspections(updatedInspections)
     localStorage.setItem("inspections", JSON.stringify(updatedInspections))
-  }
 
-  const getInspection = (id) => {
-    return inspections.find((inspection) => inspection.id === Number.parseInt(id))
+    // Return the updated inspection for immediate use
+    return updatedInspections.find((inspection) => inspection.id === id)
   }
 
   const getChecklistTemplate = (propertyType) => {
-    return checklistTemplates[propertyType.toLowerCase()] || checklistTemplates.residential
+    const templates = {
+      Residential: [
+        {
+          category: "Exterior",
+          items: [
+            { id: "ext_1", text: "Check roof condition and gutters", required: true },
+            { id: "ext_2", text: "Inspect exterior walls and siding", required: true },
+            { id: "ext_3", text: "Check windows and doors", required: true },
+            { id: "ext_4", text: "Inspect walkways and driveways", required: false },
+          ],
+        },
+        {
+          category: "Interior",
+          items: [
+            { id: "int_1", text: "Check electrical systems", required: true },
+            { id: "int_2", text: "Inspect plumbing fixtures", required: true },
+            { id: "int_3", text: "Check HVAC systems", required: true },
+            { id: "int_4", text: "Inspect flooring condition", required: false },
+          ],
+        },
+      ],
+      Commercial: [
+        {
+          category: "Safety Systems",
+          items: [
+            { id: "safe_1", text: "Check fire alarm systems", required: true },
+            { id: "safe_2", text: "Inspect emergency exits", required: true },
+            { id: "safe_3", text: "Check sprinkler systems", required: true },
+            { id: "safe_4", text: "Inspect security systems", required: false },
+          ],
+        },
+        {
+          category: "Building Systems",
+          items: [
+            { id: "bld_1", text: "Check HVAC systems", required: true },
+            { id: "bld_2", text: "Inspect electrical panels", required: true },
+            { id: "bld_3", text: "Check plumbing systems", required: true },
+            { id: "bld_4", text: "Inspect elevators", required: false },
+          ],
+        },
+      ],
+    }
+    return templates[propertyType] || templates.Residential
   }
 
   const calculateProgress = (checklist, propertyType) => {
     const template = getChecklistTemplate(propertyType)
     const totalItems = template.reduce((sum, category) => sum + category.items.length, 0)
-    const completedItems = Object.keys(checklist).length
+    const completedItems = Object.keys(checklist || {}).length
     return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0
+  }
+
+  const getInspectionById = (id) => {
+    return inspections.find((inspection) => inspection.id === id)
+  }
+
+  const deleteInspection = (id) => {
+    const updatedInspections = inspections.filter((inspection) => inspection.id !== id)
+    setInspections(updatedInspections)
+    localStorage.setItem("inspections", JSON.stringify(updatedInspections))
   }
 
   return (
@@ -191,7 +158,8 @@ export function InspectionProvider({ children }) {
         loading,
         createInspection,
         updateInspection,
-        getInspection,
+        deleteInspection,
+        getInspectionById,
         getChecklistTemplate,
         calculateProgress,
       }}

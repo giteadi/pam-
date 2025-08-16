@@ -23,6 +23,7 @@ export function PropertyProvider({ children }) {
         owner: "ABC Property Management",
         contact: "john@abcprop.com",
         createdAt: "2023-06-01",
+        amenities: ["Swimming Pool", "Gym/Fitness Center", "Parking Garage"],
       },
       {
         id: 2,
@@ -36,6 +37,7 @@ export function PropertyProvider({ children }) {
         owner: "XYZ Holdings",
         contact: "sarah@xyzholdings.com",
         createdAt: "2023-08-15",
+        amenities: ["Elevator", "Security System", "Business Center"],
       },
       {
         id: 3,
@@ -49,6 +51,7 @@ export function PropertyProvider({ children }) {
         owner: "Valley Properties LLC",
         contact: "mike@valleyprop.com",
         createdAt: "2023-04-20",
+        amenities: ["Playground", "Pet-Friendly", "Laundry Facility"],
       },
     ]
 
@@ -68,6 +71,7 @@ export function PropertyProvider({ children }) {
       id: Date.now(),
       createdAt: new Date().toISOString().split("T")[0],
       status: "Active",
+      amenities: propertyData.amenities || [],
     }
     const updatedProperties = [...properties, newProperty]
     setProperties(updatedProperties)
@@ -113,4 +117,3 @@ export const useProperties = () => {
   }
   return context
 }
-

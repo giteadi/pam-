@@ -19,9 +19,12 @@ export default function InspectionsPage() {
   const filteredInspections = inspections.filter((inspection) => {
     // Role-based filtering
     if (userRole === "client") {
+      if (!user) return false
+
+      const userName = `${user.firstName} ${user.lastName}`.toLowerCase()
       // Clients only see inspections for properties they own or are assigned to
       const userProperties = properties.filter(
-        (prop) => prop.contact === user.email || prop.owner.toLowerCase().includes(user.name.toLowerCase()),
+        (prop) => prop.contact === user.email || prop.owner.toLowerCase().includes(userName),
       )
       const userPropertyIds = userProperties.map((prop) => prop.id)
       if (!userPropertyIds.includes(inspection.propertyId)) {
@@ -38,12 +41,16 @@ export default function InspectionsPage() {
     if (hasPermission("canViewAllProperties")) {
       return true
     }
+    if (!user) return false
+
+    const userName = `${user.firstName} ${user.lastName}`.toLowerCase()
     // Clients only see properties they own or are assigned to
-    return property.contact === user.email || property.owner.toLowerCase().includes(user.name.toLowerCase())
+    return property.contact === user.email || property.owner.toLowerCase().includes(userName)
   })
 
   const handleStartInspection = (propertyId, propertyName, propertyType) => {
-    const newInspection = createInspection(propertyId, propertyName, propertyType, user.name)
+    const inspectorName = `${user.firstName} ${user.lastName}`
+    const newInspection = createInspection(propertyId, propertyName, propertyType, inspectorName)
     setActiveInspection(newInspection)
     setShowNewInspectionForm(false)
   }

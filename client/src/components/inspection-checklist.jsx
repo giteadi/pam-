@@ -35,16 +35,22 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   }
 
   const handleItemChange = (itemId, status, comment = "") => {
+    console.log("[v0] handleItemChange called:", { itemId, status, comment })
     const newChecklist = { ...checklist }
-    if (status === "unchecked") {
+
+    if (status === "unchecked" && !comment) {
+      // Only delete if there's no comment
       delete newChecklist[itemId]
     } else {
+      // Always preserve the entry if there's a comment or status
       newChecklist[itemId] = {
-        status,
+        status: status === "unchecked" ? "pending" : status,
         comment,
         timestamp: new Date().toISOString(),
       }
     }
+
+    console.log("[v0] Updated checklist:", newChecklist)
     setChecklist(newChecklist)
   }
 
@@ -76,7 +82,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   }
 
   const getItemStatus = (itemId) => {
-    return checklist[itemId]?.status || "unchecked"
+    const status = checklist[itemId]?.status || "unchecked"
+    return status === "pending" ? "unchecked" : status
   }
 
   const getItemComment = (itemId) => {
@@ -254,7 +261,10 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                       {/* Comment Field */}
                       <textarea
                         value={getItemComment(item.id)}
-                        onChange={(e) => handleItemChange(item.id, getItemStatus(item.id), e.target.value)}
+                        onChange={(e) => {
+                          console.log("[v0] Checklist comment change:", e.target.value)
+                          handleItemChange(item.id, getItemStatus(item.id), e.target.value)
+                        }}
                         placeholder="Add comments or notes..."
                         className="w-full px-3 py-2 bg-input border border-border rounded-lg focus-ring transition-all duration-200 text-sm hover:border-primary/50"
                         rows={2}
@@ -271,7 +281,10 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
             <h3 className="text-lg font-serif font-semibold text-foreground mb-4">General Notes</h3>
             <textarea
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => {
+                console.log("[v0] General notes change:", e.target.value)
+                setNotes(e.target.value)
+              }}
               placeholder="Add general inspection notes, observations, or recommendations..."
               className="w-full px-4 py-3 bg-input border border-border rounded-lg focus-ring transition-all duration-200 hover:border-primary/50"
               rows={4}
