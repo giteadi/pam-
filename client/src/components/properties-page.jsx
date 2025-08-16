@@ -22,8 +22,10 @@ export default function PropertiesPage() {
     // Role-based filtering
     if (!hasPermission("canViewAllProperties")) {
       // Clients only see properties they own or are assigned to
+      const userFullName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : ""
       const hasAccess =
-        property.contact === user.email || property.owner.toLowerCase().includes(user.name.toLowerCase())
+        property.contact === user?.email ||
+        (userFullName && property.owner?.toLowerCase().includes(userFullName.toLowerCase()))
       if (!hasAccess) return false
     }
 

@@ -9,12 +9,14 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   const [notes, setNotes] = useState(inspection.notes || "")
   const [expandedCategories, setExpandedCategories] = useState({})
   const [isAutoSaving, setIsAutoSaving] = useState(false)
+  const [customAmenities, setCustomAmenities] = useState(inspection.customAmenities || [])
+  const [newCustomAmenity, setNewCustomAmenity] = useState("")
+  const [showCustomAmenityInput, setShowCustomAmenityInput] = useState(false)
 
   const template = getChecklistTemplate(inspection.propertyType)
   const progress = calculateProgress(checklist, inspection.propertyType)
 
   useEffect(() => {
-    // Auto-save every 30 seconds
     const interval = setInterval(() => {
       handleAutoSave()
     }, 30000)
@@ -28,6 +30,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
     onSave({
       checklist,
       notes,
+      customAmenities,
       progress: updatedProgress,
     })
     await new Promise((resolve) => setTimeout(resolve, 500))
@@ -39,10 +42,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
     const newChecklist = { ...checklist }
 
     if (status === "unchecked" && !comment) {
-      // Only delete if there's no comment
       delete newChecklist[itemId]
     } else {
-      // Always preserve the entry if there's a comment or status
       newChecklist[itemId] = {
         status: status === "unchecked" ? "pending" : status,
         comment,
@@ -59,6 +60,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
     onSave({
       checklist,
       notes,
+      customAmenities,
       progress: updatedProgress,
     })
   }
@@ -68,6 +70,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
     onComplete({
       checklist,
       notes,
+      customAmenities,
       progress: updatedProgress,
       status: "completed",
       completedDate: new Date().toISOString().split("T")[0],
@@ -135,6 +138,29 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
           </svg>
         )
     }
+  }
+
+  const handleAddCustomAmenity = () => {
+    if (newCustomAmenity.trim()) {
+      const customAmenityId = `custom_${Date.now()}`
+      const newAmenity = {
+        id: customAmenityId,
+        text: newCustomAmenity.trim(),
+        isCustom: true,
+      }
+      setCustomAmenities([...customAmenities, newAmenity])
+      setNewCustomAmenity("")
+      setShowCustomAmenityInput(false)
+      console.log("[v0] Added custom amenity:", newAmenity)
+    }
+  }
+
+  const handleRemoveCustomAmenity = (amenityId) => {
+    setCustomAmenities(customAmenities.filter((amenity) => amenity.id !== amenityId))
+    const newChecklist = { ...checklist }
+    delete newChecklist[amenityId]
+    setChecklist(newChecklist)
+    console.log("[v0] Removed custom amenity:", amenityId)
   }
 
   return (
@@ -275,6 +301,144 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               )}
             </div>
           ))}
+
+          {/* Custom Amenities Section */}
+          <div className="bg-card border border-border rounded-xl overflow-hidden card-hover">
+            <div className="px-6 py-4 bg-muted/50 flex items-center justify-between">
+              <h3 className="text-lg font-serif font-semibold text-foreground">Custom Amenities</h3>
+              <button
+                onClick={() => setShowCustomAmenityInput(!showCustomAmenityInput)}
+                className="px-3 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-all duration-200"
+              >
+                {showCustomAmenityInput ? "Cancel" : "Add Custom"}
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Custom Amenity Input */}
+              {showCustomAmenityInput && (
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="text"
+                      value={newCustomAmenity}
+                      onChange={(e) => {
+                        console.log("[v0] Custom amenity input change:", e.target.value)
+                        setNewCustomAmenity(e.target.value)
+                      }}
+                      placeholder="Enter custom amenity (e.g., Wine Cellar, Elevator, Solar Panels)"
+                      className="flex-1 px-3 py-2 bg-input border border-border rounded-lg focus-ring transition-all duration-200 text-sm"
+                      onKeyPress={(e) => e.key === "Enter" && handleAddCustomAmenity()}
+                    />
+                    <button
+                      onClick={handleAddCustomAmenity}
+                      disabled={!newCustomAmenity.trim()}
+                      className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-lg text-sm font-medium transition-all duration-200"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Add property-specific amenities discovered during inspection
+                  </p>
+                </div>
+              )}
+
+              {/* Custom Amenities List */}
+              {customAmenities.length > 0 ? (
+                <div className="space-y-3">
+                  {customAmenities.map((amenity, index) => (
+                    <div
+                      key={amenity.id}
+                      className="border border-border rounded-lg p-4 card-hover stagger-item"
+                      style={{ animationDelay: `${index * 0.1}s` }}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start space-x-3">
+                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">Custom</span>
+                          <div className="flex-1">
+                            <p className="font-medium text-foreground">{amenity.text}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className={`${getStatusColor(getItemStatus(amenity.id))} icon-hover`}>
+                            {getStatusIcon(getItemStatus(amenity.id))}
+                          </div>
+                          <button
+                            onClick={() => handleRemoveCustomAmenity(amenity.id)}
+                            className="text-muted-foreground hover:text-destructive transition-colors duration-200"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Status Buttons */}
+                      <div className="flex items-center space-x-2 mb-3">
+                        {[
+                          { status: "pass", label: "Pass", color: "accent" },
+                          { status: "fail", label: "Fail", color: "destructive" },
+                          { status: "na", label: "N/A", color: "muted" },
+                        ].map(({ status, label, color }) => (
+                          <button
+                            key={status}
+                            onClick={() => handleItemChange(amenity.id, status, getItemComment(amenity.id))}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 checkbox-animation ${
+                              getItemStatus(amenity.id) === status
+                                ? `bg-${color} text-${color === "muted" ? "foreground" : color + "-foreground"}`
+                                : `bg-muted text-muted-foreground hover:bg-${color}/10 hover:text-${color}`
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                        {getItemStatus(amenity.id) !== "unchecked" && (
+                          <button
+                            onClick={() => handleItemChange(amenity.id, "unchecked")}
+                            className="px-3 py-1 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/70 transition-all duration-200"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Comment Field */}
+                      <textarea
+                        value={getItemComment(amenity.id)}
+                        onChange={(e) => {
+                          console.log("[v0] Custom amenity comment change:", e.target.value)
+                          handleItemChange(amenity.id, getItemStatus(amenity.id), e.target.value)
+                        }}
+                        placeholder="Add comments about this custom amenity..."
+                        className="w-full px-3 py-2 bg-input border border-border rounded-lg focus-ring transition-all duration-200 text-sm hover:border-primary/50"
+                        rows={2}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <svg
+                    className="w-12 h-12 mx-auto mb-3 opacity-50"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <p>No custom amenities added yet</p>
+                  <p className="text-sm">Click "Add Custom" to add property-specific amenities</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* General Notes */}
           <div className="bg-card border border-border rounded-xl p-6 card-hover">

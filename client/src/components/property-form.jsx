@@ -280,7 +280,59 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
 
           {/* Amenities Section */}
           <div className="space-y-4">
-            <label className="text-sm font-medium text-gray-700">Property Amenities</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Property Amenities</label>
+              <button
+                type="button"
+                onClick={() => setShowCustomInput(true)}
+                className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={isSubmitting || showCustomInput}
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Custom
+              </button>
+            </div>
+
+            {showCustomInput && (
+              <div className="flex items-center space-x-2 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                <input
+                  type="text"
+                  value={customAmenity}
+                  onChange={handleCustomAmenityChange}
+                  placeholder="Enter custom amenity (e.g., Rooftop Garden, Wine Cellar)"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isSubmitting}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      addCustomAmenity()
+                    }
+                  }}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={addCustomAmenity}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  disabled={isSubmitting || !customAmenity.trim()}
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomInput(false)
+                    setCustomAmenity("")
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
 
             {/* Predefined Amenities Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -311,14 +363,22 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                     .map((amenity) => (
                       <span
                         key={amenity}
-                        className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                        className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full border border-green-200"
                       >
+                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path
+                            fillRule="evenodd"
+                            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
                         {amenity}
                         <button
                           type="button"
                           onClick={() => removeAmenity(amenity)}
-                          className="ml-2 text-blue-600 hover:text-blue-800 font-bold"
+                          className="ml-2 text-green-600 hover:text-green-800 font-bold text-lg leading-none"
                           disabled={isSubmitting}
+                          title="Remove custom amenity"
                         >
                           ×
                         </button>
@@ -328,51 +388,10 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
               </div>
             )}
 
-            {/* Custom Amenity Input */}
-            {showCustomInput ? (
-              <div className="flex items-center space-x-2 p-4 bg-gray-50 rounded-lg">
-                <input
-                  type="text"
-                  value={customAmenity}
-                  onChange={handleCustomAmenityChange}
-                  placeholder="Enter custom amenity"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isSubmitting}
-                  onKeyPress={(e) => e.key === "Enter" && addCustomAmenity()}
-                />
-                <button
-                  type="button"
-                  onClick={addCustomAmenity}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  disabled={isSubmitting || !customAmenity.trim()}
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCustomInput(false)
-                    setCustomAmenity("")
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowCustomInput(true)}
-                className="inline-flex items-center px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 text-gray-600 hover:text-blue-600 transition-colors"
-                disabled={isSubmitting}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Custom Amenity
-              </button>
-            )}
+            <p className="text-xs text-gray-500 italic">
+              💡 Tip: Add custom amenities specific to this property like "Rooftop Garden", "Wine Cellar", "EV Charging
+              Station", etc.
+            </p>
           </div>
 
           {/* Form Actions */}

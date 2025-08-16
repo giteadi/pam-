@@ -1,12 +1,14 @@
 "use client"
 
+import { useState } from "react"
 import { useAuth } from "../contexts/auth-context"
 import { usePermissions } from "../hooks/use-permissions"
 import InspectionsPage from "./inspections-page"
 import PropertiesPage from "./properties-page"
 import UserManagement from "./user-management"
 
-export default function Dashboard({ activeTab = "inspections", onTabChange }) {
+export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState("inspections")
   const { user, logout } = useAuth()
   const { hasPermission, userRole } = usePermissions()
 
@@ -17,9 +19,7 @@ export default function Dashboard({ activeTab = "inspections", onTabChange }) {
 
   const handleTabClick = (tabId, e) => {
     e.preventDefault()
-    if (onTabChange) {
-      onTabChange(tabId)
-    }
+    setActiveTab(tabId)
   }
 
   const tabs = [
