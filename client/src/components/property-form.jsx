@@ -1,8 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSelector } from "react-redux"
 
 export default function PropertyForm({ property, onSubmit, onCancel }) {
+  const { loading } = useSelector((state) => state.properties)
+
   const [formData, setFormData] = useState({
     name: "",
     address: "",
@@ -15,7 +18,6 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
   })
 
   const [errors, setErrors] = useState({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [customAmenity, setCustomAmenity] = useState("")
   const [showCustomInput, setShowCustomInput] = useState(false)
 
@@ -67,24 +69,17 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
     e.preventDefault()
     console.log("[v0] Property form submitted with data:", formData)
     if (validateForm()) {
-      setIsSubmitting(true)
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 500))
       onSubmit({
         ...formData,
         units: Number.parseInt(formData.units),
       })
-      setIsSubmitting(false)
     }
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    console.log("[v0] Input change:", name, value) // Added debug logging for input changes
-    console.log("[v0] Event target:", e.target)
-    console.log("[v0] Current formData before change:", formData)
+    console.log("[v0] Input change:", name, value)
     setFormData((prev) => ({ ...prev, [name]: value }))
-    console.log("[v0] FormData after change should be:", { ...formData, [name]: value })
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }))
     }
@@ -120,7 +115,6 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
 
   const handleCustomAmenityChange = (e) => {
     console.log("[v0] Custom amenity input:", e.target.value)
-    console.log("[v0] Custom amenity event:", e)
     setCustomAmenity(e.target.value)
   }
 
@@ -148,7 +142,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                   errors.name ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="Enter property name"
-                disabled={isSubmitting}
+                disabled={loading}
               />
               {errors.name && <p className="text-sm text-red-600">{errors.name}</p>}
             </div>
@@ -164,7 +158,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                 value={formData.type}
                 onChange={handleChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                disabled={isSubmitting}
+                disabled={loading}
               >
                 <option value="Residential">Residential</option>
                 <option value="Commercial">Commercial</option>
@@ -189,7 +183,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                 errors.address ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Enter full address"
-              disabled={isSubmitting}
+              disabled={loading}
             />
             {errors.address && <p className="text-sm text-red-600">{errors.address}</p>}
           </div>
@@ -211,7 +205,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                   errors.units ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="Enter number of units"
-                disabled={isSubmitting}
+                disabled={loading}
               />
               {errors.units && <p className="text-sm text-red-600">{errors.units}</p>}
             </div>
@@ -230,7 +224,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
                   errors.nextInspection ? "border-red-500" : "border-gray-300"
                 }`}
-                disabled={isSubmitting}
+                disabled={loading}
               />
               {errors.nextInspection && <p className="text-sm text-red-600">{errors.nextInspection}</p>}
             </div>
@@ -252,7 +246,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                   errors.owner ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="Enter owner name"
-                disabled={isSubmitting}
+                disabled={loading}
               />
               {errors.owner && <p className="text-sm text-red-600">{errors.owner}</p>}
             </div>
@@ -272,7 +266,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                   errors.contact ? "border-red-500" : "border-gray-300"
                 }`}
                 placeholder="Enter contact email"
-                disabled={isSubmitting}
+                disabled={loading}
               />
               {errors.contact && <p className="text-sm text-red-600">{errors.contact}</p>}
             </div>
@@ -286,7 +280,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                 type="button"
                 onClick={() => setShowCustomInput(true)}
                 className="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                disabled={isSubmitting || showCustomInput}
+                disabled={loading || showCustomInput}
               >
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -303,7 +297,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                   onChange={handleCustomAmenityChange}
                   placeholder="Enter custom amenity (e.g., Rooftop Garden, Wine Cellar)"
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  disabled={isSubmitting}
+                  disabled={loading}
                   onKeyPress={(e) => {
                     if (e.key === "Enter") {
                       e.preventDefault()
@@ -316,7 +310,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                   type="button"
                   onClick={addCustomAmenity}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  disabled={isSubmitting || !customAmenity.trim()}
+                  disabled={loading || !customAmenity.trim()}
                 >
                   Add
                 </button>
@@ -327,7 +321,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                     setCustomAmenity("")
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
-                  disabled={isSubmitting}
+                  disabled={loading}
                 >
                   Cancel
                 </button>
@@ -346,7 +340,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                     checked={formData.amenities.includes(amenity)}
                     onChange={() => toggleAmenity(amenity)}
                     className="w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                    disabled={isSubmitting}
+                    disabled={loading}
                   />
                   <span className="text-sm text-gray-700">{amenity}</span>
                 </label>
@@ -377,7 +371,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
                           type="button"
                           onClick={() => removeAmenity(amenity)}
                           className="ml-2 text-green-600 hover:text-green-800 font-bold text-lg leading-none"
-                          disabled={isSubmitting}
+                          disabled={loading}
                           title="Remove custom amenity"
                         >
                           ×
@@ -400,16 +394,16 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
               type="button"
               onClick={onCancel}
               className="px-6 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
-              disabled={isSubmitting}
+              disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={loading}
               className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              {isSubmitting ? (
+              {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   <span>Saving...</span>

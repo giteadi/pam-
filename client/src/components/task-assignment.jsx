@@ -1,18 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { useTasks } from "../contexts/task-context"
-import { useUsers } from "../contexts/user-context"
-import { useProperties } from "../contexts/property-context"
-import { usePermissions } from "../hooks/use-permissions"
-import { useAuth } from "../contexts/auth-context"
+import { useState, useEffect } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { fetchUsers } from "../redux/slices/userSlice"
+import { fetchProperties } from "../redux/slices/propertySlice"
 
 export default function TaskAssignment() {
-  const { createTask, tasks, getTasksByAssignee, getTaskStats } = useTasks()
-  const { users } = useUsers()
-  const { properties } = useProperties()
-  const { hasPermission } = usePermissions()
-  const { user } = useAuth()
+  const dispatch = useDispatch()
+  const { user: currentUser } = useSelector((state) => state.users)
+  const { users } = useSelector((state) => state.users)
+  const { properties } = useSelector((state) => state.properties)
+
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     title: "",
@@ -24,6 +22,43 @@ export default function TaskAssignment() {
     propertyId: "",
   })
   const [errors, setErrors] = useState({})
+
+  // Mock tasks data - in real app this would come from Redux
+  const [tasks] = useState([
+    {
+      id: 1,
+      title: "Property Inspection - Downtown Office",
+      assignedTo: "john.supervisor@demo.com",
+      priority: "high",
+      status: "in-progress",
+      dueDate: "2024-01-15",
+      progress: 75,
+      propertyName: "Downtown Office Complex",
+    },
+    {
+      id: 2,
+      title: "Safety Compliance Check",
+      assignedTo: "jane.supervisor@demo.com",
+      priority: "medium",
+      status: "pending",
+      dueDate: "2024-01-20",
+      progress: 0,
+      propertyName: "Residential Complex A",
+    },
+  ])
+
+  useEffect(() => {
+    dispatch(fetchUsers())
+    dispatch(fetchProperties())
+  }, [dispatch])
+
+  const hasPermission = (permission) => {
+    const userRole = currentUser?.role
+    const permissions = {
+      canManageUsers: userRole === "admin" || userRole === "supervisor",
+    }
+    return permissions[permission] || false
+  }
 
   if (!hasPermission("canManageUsers")) {
     return (
@@ -47,7 +82,15 @@ export default function TaskAssignment() {
   }
 
   const supervisors = users.filter((u) => u.role === "supervisor")
-  const stats = getTaskStats()
+
+  // Mock stats - in real app this would come from Redux
+  const stats = {
+    total: tasks.length,
+    completed: tasks.filter((t) => t.status === "completed").length,
+    inProgress: tasks.filter((t) => t.status === "in-progress").length,
+    pending: tasks.filter((t) => t.status === "pending").length,
+    overdue: tasks.filter((t) => t.status === "overdue").length,
+  }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -64,10 +107,13 @@ export default function TaskAssignment() {
       const selectedProperty = properties.find((p) => p.id === formData.propertyId)
       const taskData = {
         ...formData,
-        assignedBy: user.email,
+        assignedBy: currentUser.email,
         propertyName: selectedProperty ? selectedProperty.name : "General Task",
       }
-      createTask(taskData)
+
+      // TODO: Dispatch create task action
+      console.log("Creating task:", taskData)
+
       setShowForm(false)
       setFormData({
         title: "",

@@ -1,31 +1,37 @@
 "use client"
 
-import { useAuth } from "../contexts/auth-context"
+import { useSelector } from "react-redux"
+import { useNavigate } from "react-router-dom"
 import { useEffect } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
 
-export default function AuthGuard({ children }) {
-  const { user, isAuthenticated } = useAuth()
+export default function AuthGuard({ children, requiredRole = null }) {
+  const { user, isAuthenticated, loading } = useSelector((state) => state.users)
   const navigate = useNavigate()
-  const location = useLocation()
 
   useEffect(() => {
-    console.log("[v0] AuthGuard - isAuthenticated:", isAuthenticated, "pathname:", location.pathname)
-    if (!isAuthenticated && location.pathname !== "/login") {
-      console.log("[v0] Not authenticated, redirecting to login")
-      navigate("/login", { replace: true })
-    }
-  }, [isAuthenticated, navigate, location.pathname])
+    if (!loading) {
+      if (!isAuthenticated) {
+        navigate("/login")
+        return
+      }
 
-  if (!isAuthenticated && location.pathname !== "/login") {
+      if (requiredRole && user?.role !== requiredRole) {
+        navigate("/unauthorized")
+        return
+      }
+    }
+  }, [isAuthenticated, user, loading, requiredRole, navigate])
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting to login...</p>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
+  }
+
+  if (!isAuthenticated || (requiredRole && user?.role !== requiredRole)) {
+    return null
   }
 
   return children

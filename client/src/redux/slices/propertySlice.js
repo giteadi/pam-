@@ -3,7 +3,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 const BASE_URL = "http://localhost:4000"
 
 // Async thunks for API calls
-export const fetchAllProperties = createAsyncThunk("properties/fetchAll", async (_, { rejectWithValue }) => {
+export const fetchProperties = createAsyncThunk("properties/fetchAll", async (_, { rejectWithValue }) => {
   try {
     const response = await fetch(`${BASE_URL}/api/properties`)
     const data = await response.json()
@@ -56,9 +56,9 @@ export const createProperty = createAsyncThunk("properties/create", async (prope
 
 export const updateProperty = createAsyncThunk(
   "properties/update",
-  async ({ propertyId, propertyData }, { rejectWithValue }) => {
+  async ({ id, data: propertyData }, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${BASE_URL}/api/properties/${propertyId}`, {
+      const response = await fetch(`${BASE_URL}/api/properties/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -71,7 +71,7 @@ export const updateProperty = createAsyncThunk(
         return rejectWithValue(data.msg || "Failed to update property")
       }
 
-      return { propertyId, propertyData }
+      return { propertyId: id, propertyData }
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -118,16 +118,16 @@ const propertySlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch all properties
-      .addCase(fetchAllProperties.pending, (state) => {
+      .addCase(fetchProperties.pending, (state) => {
         state.loading = true
         state.error = null
       })
-      .addCase(fetchAllProperties.fulfilled, (state, action) => {
+      .addCase(fetchProperties.fulfilled, (state, action) => {
         state.loading = false
         state.properties = action.payload
         state.totalCount = action.payload.length
       })
-      .addCase(fetchAllProperties.rejected, (state, action) => {
+      .addCase(fetchProperties.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })

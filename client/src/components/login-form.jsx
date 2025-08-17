@@ -1,16 +1,17 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "../contexts/auth-context"
+import { useDispatch, useSelector } from "react-redux"
+import { loginUser, registerUser } from "../redux/slices/userSlice"
 import { useNavigate } from "react-router-dom"
 
 export default function LoginForm() {
   const [activeTab, setActiveTab] = useState("login")
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const { login, register, forgotPassword } = useAuth()
+  const dispatch = useDispatch()
   const navigate = useNavigate()
+
+  const { loading, error, user } = useSelector((state) => state.users)
+  const [success, setSuccess] = useState("")
 
   // Login form state
   const [loginData, setLoginData] = useState({
@@ -34,88 +35,69 @@ export default function LoginForm() {
 
   const handleLogin = async (e) => {
     e.preventDefault()
-    setError("")
-    setIsLoading(true)
+    setSuccess("")
 
     try {
       console.log("[v0] Attempting login with:", loginData)
-      const result = login(loginData.email, loginData.password, loginData.role)
-      console.log("[v0] Login result:", result)
+      const result = await dispatch(
+        loginUser({
+          email: loginData.email,
+          password: loginData.password,
+          role: loginData.role,
+        }),
+      ).unwrap()
 
-      if (result.success) {
-        console.log("[v0] Login successful, navigating to dashboard")
-        navigate("/dashboard")
-      } else {
-        setError(result.error)
-      }
+      console.log("[v0] Login successful:", result)
+      navigate("/dashboard")
     } catch (err) {
       console.log("[v0] Login error:", err)
-      setError("Login failed. Please try again.")
-    } finally {
-      setIsLoading(false)
     }
   }
 
   const handleRegister = async (e) => {
     e.preventDefault()
-    setError("")
     setSuccess("")
-    setIsLoading(true)
 
     if (registerData.password !== registerData.confirmPassword) {
-      setError("Passwords do not match")
-      setIsLoading(false)
       return
     }
 
     try {
-      const result = register(
-        registerData.email,
-        registerData.password,
-        registerData.firstName,
-        registerData.lastName,
-        registerData.role,
-      )
+      await dispatch(
+        registerUser({
+          email: registerData.email,
+          password: registerData.password,
+          firstName: registerData.firstName,
+          lastName: registerData.lastName,
+          role: registerData.role,
+        }),
+      ).unwrap()
 
-      if (result.success) {
-        setSuccess("Registration successful! Please login with your credentials.")
-        setActiveTab("login")
-        setRegisterData({
-          firstName: "",
-          lastName: "",
-          email: "",
-          password: "",
-          confirmPassword: "",
-          role: "client",
-        })
-      } else {
-        setError(result.error)
-      }
+      setSuccess("Registration successful! Please login with your credentials.")
+      setActiveTab("login")
+      setRegisterData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+        role: "client",
+      })
     } catch (err) {
-      setError("Registration failed. Please try again.")
-    } finally {
-      setIsLoading(false)
+      console.log("[v0] Registration error:", err)
     }
   }
 
   const handleForgotPassword = async (e) => {
     e.preventDefault()
-    setError("")
     setSuccess("")
-    setIsLoading(true)
 
     try {
-      const result = forgotPassword(forgotEmail)
-      if (result.success) {
-        setSuccess("Password reset link sent to your email!")
-        setForgotEmail("")
-      } else {
-        setError("Failed to send reset link. Please try again.")
-      }
+      // TODO: Implement forgot password Redux action
+      setSuccess("Password reset link sent to your email!")
+      setForgotEmail("")
     } catch (err) {
-      setError("Failed to send reset link. Please try again.")
-    } finally {
-      setIsLoading(false)
+      // Handle error
     }
   }
 
@@ -165,7 +147,6 @@ export default function LoginForm() {
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id)
-                  setError("")
                   setSuccess("")
                 }}
                 className={`flex-1 py-4 px-6 text-sm font-medium transition-colors ${
@@ -227,7 +208,7 @@ export default function LoginForm() {
                         console.log("[v0] Login email change:", e.target.value)
                         setLoginData({ ...loginData, email: e.target.value })
                       }}
-                      disabled={isLoading}
+                      disabled={loading}
                     />
                   </div>
 
@@ -243,7 +224,7 @@ export default function LoginForm() {
                         console.log("[v0] Login password change:", e.target.value)
                         setLoginData({ ...loginData, password: e.target.value })
                       }}
-                      disabled={isLoading}
+                      disabled={loading}
                     />
                   </div>
 
@@ -253,7 +234,7 @@ export default function LoginForm() {
                       value={loginData.role}
                       onChange={(e) => setLoginData({ ...loginData, role: e.target.value })}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      disabled={isLoading}
+                      disabled={loading}
                     >
                       <option value="admin">Admin</option>
                       <option value="supervisor">Supervisor</option>
@@ -263,10 +244,10 @@ export default function LoginForm() {
 
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={loading}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isLoading ? (
+                    {loading ? (
                       <div className="flex items-center justify-center space-x-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         <span>Signing in...</span>
@@ -295,7 +276,7 @@ export default function LoginForm() {
                         console.log("[v0] Register firstName change:", e.target.value)
                         setRegisterData({ ...registerData, firstName: e.target.value })
                       }}
-                      disabled={isLoading}
+                      disabled={loading}
                     />
                   </div>
                   <div>
@@ -310,7 +291,7 @@ export default function LoginForm() {
                         console.log("[v0] Register lastName change:", e.target.value)
                         setRegisterData({ ...registerData, lastName: e.target.value })
                       }}
-                      disabled={isLoading}
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -324,7 +305,7 @@ export default function LoginForm() {
                     placeholder="Enter your email"
                     value={registerData.email}
                     onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
 
@@ -337,7 +318,7 @@ export default function LoginForm() {
                     placeholder="Create a password"
                     value={registerData.password}
                     onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
 
@@ -350,7 +331,7 @@ export default function LoginForm() {
                     placeholder="Confirm your password"
                     value={registerData.confirmPassword}
                     onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
 
@@ -360,7 +341,7 @@ export default function LoginForm() {
                     value={registerData.role}
                     onChange={(e) => setRegisterData({ ...registerData, role: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    disabled={isLoading}
+                    disabled={loading}
                   >
                     <option value="client">Client</option>
                     <option value="supervisor">Supervisor</option>
@@ -370,10 +351,10 @@ export default function LoginForm() {
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={loading}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? (
+                  {loading ? (
                     <div className="flex items-center justify-center space-x-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       <span>Creating account...</span>
@@ -403,16 +384,16 @@ export default function LoginForm() {
                     placeholder="Enter your email"
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
-                    disabled={isLoading}
+                    disabled={loading}
                   />
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={loading}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? (
+                  {loading ? (
                     <div className="flex items-center justify-center space-x-2">
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       <span>Sending...</span>

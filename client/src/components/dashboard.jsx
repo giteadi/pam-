@@ -1,8 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { useAuth } from "../contexts/auth-context"
-import { usePermissions } from "../hooks/use-permissions"
+import { useState, useEffect } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { Link, useNavigate } from "react-router-dom"
+import { logoutUser } from "../redux/slices/userSlice"
+import { fetchDashboardStats, fetchRecentActivities, fetchUpcomingInspections } from "../redux/slices/dashboardSlice"
 import InspectionsPage from "./inspections-page"
 import PropertiesPage from "./properties-page"
 import UserManagement from "./user-management"
@@ -12,12 +14,29 @@ import NotificationPanel from "./notification-panel"
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("inspections")
-  const { user, logout } = useAuth()
-  const { hasPermission, userRole } = usePermissions()
+  const dispatch = useDispatch()
+  const { user } = useSelector((state) => state.users)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    dispatch(fetchDashboardStats())
+    dispatch(fetchRecentActivities())
+    dispatch(fetchUpcomingInspections())
+  }, [dispatch])
+
+  const hasPermission = (permission) => {
+    const userRole = user?.role
+    const permissions = {
+      canViewInspections: true, // All users can view inspections
+      canViewProperties: true, // All users can view properties
+      canManageUsers: userRole === "admin" || userRole === "supervisor",
+    }
+    return permissions[permission] || false
+  }
 
   const handleLogout = () => {
-    logout()
-    window.location.href = "/"
+    dispatch(logoutUser())
+    navigate("/")
   }
 
   const handleTabClick = (tabId, e) => {
@@ -36,7 +55,7 @@ export default function Dashboard() {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2h2a2 2 0 012-2h2a2 2 0 012 2"
           />
         </svg>
       ),
@@ -131,9 +150,9 @@ export default function Dashboard() {
               <div className="hidden md:block">
                 <div className="ml-10 flex items-baseline space-x-4">
                   {availableTabs.map((tab) => (
-                    <a
+                    <Link
                       key={tab.id}
-                      href={tab.path}
+                      to={tab.path}
                       onClick={(e) => handleTabClick(tab.id, e)}
                       className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 cursor-pointer ${
                         activeTab === tab.id
@@ -143,7 +162,7 @@ export default function Dashboard() {
                     >
                       {tab.icon}
                       <span>{tab.label}</span>
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -157,7 +176,7 @@ export default function Dashboard() {
                 <span className="font-medium text-foreground">
                   {user?.firstName} {user?.lastName}
                 </span>
-                <span className="ml-2 px-2 py-1 bg-muted text-muted-foreground rounded text-xs">{userRole}</span>
+                <span className="ml-2 px-2 py-1 bg-muted text-muted-foreground rounded text-xs">{user?.role}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -173,9 +192,9 @@ export default function Dashboard() {
         <div className="md:hidden border-t border-border">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {availableTabs.map((tab) => (
-              <a
+              <Link
                 key={tab.id}
-                href={tab.path}
+                to={tab.path}
                 onClick={(e) => handleTabClick(tab.id, e)}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 cursor-pointer ${
                   activeTab === tab.id
@@ -185,7 +204,7 @@ export default function Dashboard() {
               >
                 {tab.icon}
                 <span>{tab.label}</span>
-              </a>
+              </Link>
             ))}
           </div>
         </div>

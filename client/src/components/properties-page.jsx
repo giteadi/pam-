@@ -1,22 +1,37 @@
 "use client"
 
-import { useState } from "react"
-import { useProperties } from "../contexts/property-context"
-import { useAuth } from "../contexts/auth-context"
-import { usePermissions } from "../hooks/use-permissions"
+import { useState, useEffect } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { fetchProperties, createProperty, updateProperty, deleteProperty } from "../redux/slices/propertySlice"
 import PropertyCard from "./property-card"
 import PropertyForm from "./property-form"
 
 export default function PropertiesPage() {
-  const { properties, loading, addProperty, updateProperty, deleteProperty } = useProperties()
-  const { user } = useAuth()
-  const { hasPermission, userRole } = usePermissions()
+  const dispatch = useDispatch()
+  const { properties, loading, error } = useSelector((state) => state.properties)
+  const { user } = useSelector((state) => state.users)
+
   const [showForm, setShowForm] = useState(false)
   const [editingProperty, setEditingProperty] = useState(null)
   const [viewingProperty, setViewingProperty] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+
+  useEffect(() => {
+    dispatch(fetchProperties())
+  }, [dispatch])
+
+  const hasPermission = (permission) => {
+    const userRole = user?.role
+    const permissions = {
+      canViewAllProperties: userRole === "admin" || userRole === "supervisor",
+      canCreateProperty: userRole === "admin" || userRole === "supervisor",
+      canEditProperty: userRole === "admin" || userRole === "supervisor",
+      canDeleteProperty: userRole === "admin",
+    }
+    return permissions[permission] || false
+  }
 
   const filteredProperties = properties.filter((property) => {
     // Role-based filtering
@@ -53,20 +68,28 @@ export default function PropertiesPage() {
     setViewingProperty(property)
   }
 
-  const handleDeleteProperty = (property) => {
+  const handleDeleteProperty = async (property) => {
     if (window.confirm(`Are you sure you want to delete "${property.name}"?`)) {
-      deleteProperty(property.id)
+      try {
+        await dispatch(deleteProperty(property.id)).unwrap()
+      } catch (err) {
+        console.error("Failed to delete property:", err)
+      }
     }
   }
 
-  const handleFormSubmit = (formData) => {
-    if (editingProperty) {
-      updateProperty(editingProperty.id, formData)
-    } else {
-      addProperty(formData)
+  const handleFormSubmit = async (formData) => {
+    try {
+      if (editingProperty) {
+        await dispatch(updateProperty({ id: editingProperty.id, data: formData })).unwrap()
+      } else {
+        await dispatch(createProperty(formData)).unwrap()
+      }
+      setShowForm(false)
+      setEditingProperty(null)
+    } catch (err) {
+      console.error("Failed to save property:", err)
     }
-    setShowForm(false)
-    setEditingProperty(null)
   }
 
   const handleFormCancel = () => {
@@ -110,6 +133,13 @@ export default function PropertiesPage() {
           </div>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -190,7 +220,7 @@ export default function PropertiesPage() {
               <PropertyCard
                 key={property.id}
                 property={property}
-                userRole={userRole}
+                userRole={user?.role}
                 onEdit={handleEditProperty}
                 onView={handleViewProperty}
                 onDelete={handleDeleteProperty}

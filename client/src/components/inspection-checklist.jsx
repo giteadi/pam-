@@ -1,10 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useInspections } from "../contexts/inspection-context"
+import { useDispatch, useSelector } from "react-redux"
+import { updateChecklistItem } from "../redux/slices/inspectionSlice"
 
 export default function InspectionChecklist({ inspection, onSave, onComplete }) {
-  const { getChecklistTemplate, calculateProgress } = useInspections()
+  const dispatch = useDispatch()
+  const { loading } = useSelector((state) => state.inspections)
+
   const [checklist, setChecklist] = useState(inspection.checklist || {})
   const [notes, setNotes] = useState(inspection.notes || "")
   const [expandedCategories, setExpandedCategories] = useState({})
@@ -13,8 +16,43 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   const [newCustomAmenity, setNewCustomAmenity] = useState("")
   const [showCustomAmenityInput, setShowCustomAmenityInput] = useState(false)
 
-  const template = getChecklistTemplate(inspection.propertyType)
-  const progress = calculateProgress(checklist, inspection.propertyType)
+  // Mock template - in real app this would come from Redux or API
+  const template = [
+    {
+      category: "Exterior",
+      items: [
+        { id: "ext_1", text: "Building structure is sound", required: true },
+        { id: "ext_2", text: "Roof condition is acceptable", required: true },
+        { id: "ext_3", text: "Windows and doors function properly", required: false },
+        { id: "ext_4", text: "Exterior lighting is adequate", required: false },
+      ],
+    },
+    {
+      category: "Interior",
+      items: [
+        { id: "int_1", text: "Flooring is in good condition", required: true },
+        { id: "int_2", text: "Walls and ceilings are intact", required: true },
+        { id: "int_3", text: "Electrical systems are functional", required: true },
+        { id: "int_4", text: "Plumbing systems work properly", required: true },
+      ],
+    },
+    {
+      category: "Safety",
+      items: [
+        { id: "saf_1", text: "Fire safety equipment is present", required: true },
+        { id: "saf_2", text: "Emergency exits are clearly marked", required: true },
+        { id: "saf_3", text: "Security systems are operational", required: false },
+      ],
+    },
+  ]
+
+  const calculateProgress = () => {
+    const totalItems = template.reduce((acc, category) => acc + category.items.length, 0) + customAmenities.length
+    const completedItems = Object.keys(checklist).length
+    return totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0
+  }
+
+  const progress = calculateProgress()
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,7 +64,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
 
   const handleAutoSave = async () => {
     setIsAutoSaving(true)
-    const updatedProgress = calculateProgress(checklist, inspection.propertyType)
+    const updatedProgress = calculateProgress()
     onSave({
       checklist,
       notes,
@@ -37,7 +75,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
     setIsAutoSaving(false)
   }
 
-  const handleItemChange = (itemId, status, comment = "") => {
+  const handleItemChange = async (itemId, status, comment = "") => {
     console.log("[v0] handleItemChange called:", { itemId, status, comment })
     const newChecklist = { ...checklist }
 
@@ -53,10 +91,23 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
 
     console.log("[v0] Updated checklist:", newChecklist)
     setChecklist(newChecklist)
+
+    try {
+      await dispatch(
+        updateChecklistItem({
+          inspectionId: inspection.id,
+          itemId,
+          status: status === "unchecked" ? "pending" : status,
+          comment,
+        }),
+      ).unwrap()
+    } catch (err) {
+      console.error("Failed to update checklist item:", err)
+    }
   }
 
   const handleSave = () => {
-    const updatedProgress = calculateProgress(checklist, inspection.propertyType)
+    const updatedProgress = calculateProgress()
     onSave({
       checklist,
       notes,
@@ -66,7 +117,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   }
 
   const handleComplete = () => {
-    const updatedProgress = calculateProgress(checklist, inspection.propertyType)
+    const updatedProgress = calculateProgress()
     onComplete({
       checklist,
       notes,
@@ -179,23 +230,28 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               <div className="text-right">
                 <div className="text-sm font-medium text-foreground flex items-center space-x-2">
                   <span>{progress}% Complete</span>
-                  {isAutoSaving && (
-                    <div className="w-3 h-3 border border-primary/30 border-t-primary rounded-full spinner"></div>
+                  {(isAutoSaving || loading) && (
+                    <div className="w-3 h-3 border border-primary/30 border-t-primary rounded-full animate-spin"></div>
                   )}
                 </div>
                 <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-primary progress-bar" style={{ width: `${progress}%` }}></div>
+                  <div
+                    className="h-full bg-primary transition-all duration-300"
+                    style={{ width: `${progress}%` }}
+                  ></div>
                 </div>
               </div>
               <button
                 onClick={handleSave}
-                className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-lg btn-primary"
+                disabled={loading}
+                className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-lg transition-colors disabled:opacity-50"
               >
                 Save
               </button>
               <button
                 onClick={handleComplete}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg btn-primary"
+                disabled={loading}
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50"
               >
                 Complete
               </button>
@@ -208,7 +264,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {template.map((category, categoryIndex) => (
-            <div key={categoryIndex} className="bg-card border border-border rounded-xl overflow-hidden card-hover">
+            <div key={categoryIndex} className="bg-card border border-border rounded-xl overflow-hidden">
               <button
                 onClick={() => toggleCategory(categoryIndex)}
                 className="w-full px-6 py-4 bg-muted/50 hover:bg-muted/70 transition-all duration-200 flex items-center justify-between"
@@ -232,13 +288,9 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               </button>
 
               {expandedCategories[categoryIndex] !== false && (
-                <div className="p-6 space-y-4 height-transition">
+                <div className="p-6 space-y-4">
                   {category.items.map((item, itemIndex) => (
-                    <div
-                      key={item.id}
-                      className={`border border-border rounded-lg p-4 card-hover stagger-item`}
-                      style={{ animationDelay: `${itemIndex * 0.1}s` }}
-                    >
+                    <div key={item.id} className="border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-start space-x-3">
                           {item.required && (
@@ -250,7 +302,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                             <p className="font-medium text-foreground">{item.text}</p>
                           </div>
                         </div>
-                        <div className={`${getStatusColor(getItemStatus(item.id))} icon-hover`}>
+                        <div className={`${getStatusColor(getItemStatus(item.id))}`}>
                           {getStatusIcon(getItemStatus(item.id))}
                         </div>
                       </div>
@@ -265,7 +317,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           <button
                             key={status}
                             onClick={() => handleItemChange(item.id, status, getItemComment(item.id))}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 checkbox-animation ${
+                            disabled={loading}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
                               getItemStatus(item.id) === status
                                 ? `bg-${color} text-${color === "muted" ? "foreground" : color + "-foreground"}`
                                 : `bg-muted text-muted-foreground hover:bg-${color}/10 hover:text-${color}`
@@ -277,7 +330,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                         {getItemStatus(item.id) !== "unchecked" && (
                           <button
                             onClick={() => handleItemChange(item.id, "unchecked")}
-                            className="px-3 py-1 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/70 transition-all duration-200"
+                            disabled={loading}
+                            className="px-3 py-1 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/70 transition-all duration-200 disabled:opacity-50"
                           >
                             Clear
                           </button>
@@ -292,8 +346,9 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           handleItemChange(item.id, getItemStatus(item.id), e.target.value)
                         }}
                         placeholder="Add comments or notes..."
-                        className="w-full px-3 py-2 bg-input border border-border rounded-lg focus-ring transition-all duration-200 text-sm hover:border-primary/50"
+                        className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors text-sm"
                         rows={2}
+                        disabled={loading}
                       />
                     </div>
                   ))}
@@ -303,12 +358,12 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
           ))}
 
           {/* Custom Amenities Section */}
-          <div className="bg-card border border-border rounded-xl overflow-hidden card-hover">
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-6 py-4 bg-muted/50 flex items-center justify-between">
               <h3 className="text-lg font-serif font-semibold text-foreground">Custom Amenities</h3>
               <button
                 onClick={() => setShowCustomAmenityInput(!showCustomAmenityInput)}
-                className="px-3 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-all duration-200"
+                className="px-3 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors"
               >
                 {showCustomAmenityInput ? "Cancel" : "Add Custom"}
               </button>
@@ -327,13 +382,13 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                         setNewCustomAmenity(e.target.value)
                       }}
                       placeholder="Enter custom amenity (e.g., Wine Cellar, Elevator, Solar Panels)"
-                      className="flex-1 px-3 py-2 bg-input border border-border rounded-lg focus-ring transition-all duration-200 text-sm"
+                      className="flex-1 px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors text-sm"
                       onKeyPress={(e) => e.key === "Enter" && handleAddCustomAmenity()}
                     />
                     <button
                       onClick={handleAddCustomAmenity}
                       disabled={!newCustomAmenity.trim()}
-                      className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-lg text-sm font-medium transition-all duration-200"
+                      className="px-4 py-2 bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-lg text-sm font-medium transition-colors"
                     >
                       Add
                     </button>
@@ -348,11 +403,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               {customAmenities.length > 0 ? (
                 <div className="space-y-3">
                   {customAmenities.map((amenity, index) => (
-                    <div
-                      key={amenity.id}
-                      className="border border-border rounded-lg p-4 card-hover stagger-item"
-                      style={{ animationDelay: `${index * 0.1}s` }}
-                    >
+                    <div key={amenity.id} className="border border-border rounded-lg p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-start space-x-3">
                           <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">Custom</span>
@@ -361,7 +412,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <div className={`${getStatusColor(getItemStatus(amenity.id))} icon-hover`}>
+                          <div className={`${getStatusColor(getItemStatus(amenity.id))}`}>
                             {getStatusIcon(getItemStatus(amenity.id))}
                           </div>
                           <button
@@ -390,7 +441,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           <button
                             key={status}
                             onClick={() => handleItemChange(amenity.id, status, getItemComment(amenity.id))}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 checkbox-animation ${
+                            disabled={loading}
+                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
                               getItemStatus(amenity.id) === status
                                 ? `bg-${color} text-${color === "muted" ? "foreground" : color + "-foreground"}`
                                 : `bg-muted text-muted-foreground hover:bg-${color}/10 hover:text-${color}`
@@ -402,7 +454,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                         {getItemStatus(amenity.id) !== "unchecked" && (
                           <button
                             onClick={() => handleItemChange(amenity.id, "unchecked")}
-                            className="px-3 py-1 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/70 transition-all duration-200"
+                            disabled={loading}
+                            className="px-3 py-1 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/70 transition-all duration-200 disabled:opacity-50"
                           >
                             Clear
                           </button>
@@ -417,8 +470,9 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           handleItemChange(amenity.id, getItemStatus(amenity.id), e.target.value)
                         }}
                         placeholder="Add comments about this custom amenity..."
-                        className="w-full px-3 py-2 bg-input border border-border rounded-lg focus-ring transition-all duration-200 text-sm hover:border-primary/50"
+                        className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors text-sm"
                         rows={2}
+                        disabled={loading}
                       />
                     </div>
                   ))}
@@ -441,7 +495,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
           </div>
 
           {/* General Notes */}
-          <div className="bg-card border border-border rounded-xl p-6 card-hover">
+          <div className="bg-card border border-border rounded-xl p-6">
             <h3 className="text-lg font-serif font-semibold text-foreground mb-4">General Notes</h3>
             <textarea
               value={notes}
@@ -450,8 +504,9 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                 setNotes(e.target.value)
               }}
               placeholder="Add general inspection notes, observations, or recommendations..."
-              className="w-full px-4 py-3 bg-input border border-border rounded-lg focus-ring transition-all duration-200 hover:border-primary/50"
+              className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
               rows={4}
+              disabled={loading}
             />
           </div>
         </div>

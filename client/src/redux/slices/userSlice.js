@@ -3,7 +3,7 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 const BASE_URL = "http://localhost:4000"
 
 // Async thunks for API calls
-export const fetchAllUsers = createAsyncThunk("users/fetchAll", async (_, { rejectWithValue }) => {
+export const fetchUsers = createAsyncThunk("users/fetchAll", async (_, { rejectWithValue }) => {
   try {
     const response = await fetch(`${BASE_URL}/api/users`)
     const data = await response.json()
@@ -54,9 +54,9 @@ export const createUser = createAsyncThunk("users/create", async (userData, { re
   }
 })
 
-export const updateUser = createAsyncThunk("users/update", async ({ userId, userData }, { rejectWithValue }) => {
+export const updateUser = createAsyncThunk("users/update", async ({ id, data: userData }, { rejectWithValue }) => {
   try {
-    const response = await fetch(`${BASE_URL}/api/users/${userId}`, {
+    const response = await fetch(`${BASE_URL}/api/users/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -69,7 +69,7 @@ export const updateUser = createAsyncThunk("users/update", async ({ userId, user
       return rejectWithValue(data.msg || "Failed to update user")
     }
 
-    return { userId, userData }
+    return { userId: id, userData }
   } catch (error) {
     return rejectWithValue(error.message)
   }
@@ -116,6 +116,27 @@ export const loginUser = createAsyncThunk("users/login", async (credentials, { r
   }
 })
 
+export const registerUser = createAsyncThunk("users/register", async (userData, { rejectWithValue }) => {
+  try {
+    const response = await fetch(`${BASE_URL}/api/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(userData),
+    })
+    const data = await response.json()
+
+    if (!data.success) {
+      return rejectWithValue(data.msg || "Registration failed")
+    }
+
+    return data.data
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
+
 export const logoutUser = createAsyncThunk("users/logout", async (_, { rejectWithValue }) => {
   try {
     // Remove user data from localStorage
@@ -130,7 +151,7 @@ const userSlice = createSlice({
   name: "users",
   initialState: {
     users: [],
-    currentUser: JSON.parse(localStorage.getItem("user")) || null,
+    user: JSON.parse(localStorage.getItem("user")) || null,
     selectedUser: null,
     loading: false,
     error: null,
@@ -148,23 +169,23 @@ const userSlice = createSlice({
       state.selectedUser = action.payload
     },
     setCurrentUser: (state, action) => {
-      state.currentUser = action.payload
+      state.user = action.payload
       state.isAuthenticated = !!action.payload
     },
   },
   extraReducers: (builder) => {
     builder
       // Fetch all users
-      .addCase(fetchAllUsers.pending, (state) => {
+      .addCase(fetchUsers.pending, (state) => {
         state.loading = true
         state.error = null
       })
-      .addCase(fetchAllUsers.fulfilled, (state, action) => {
+      .addCase(fetchUsers.fulfilled, (state, action) => {
         state.loading = false
         state.users = action.payload
         state.totalCount = action.payload.length
       })
-      .addCase(fetchAllUsers.rejected, (state, action) => {
+      .addCase(fetchUsers.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })
@@ -213,9 +234,9 @@ const userSlice = createSlice({
         if (state.selectedUser && state.selectedUser.id === userId) {
           state.selectedUser = { ...state.selectedUser, ...userData }
         }
-        if (state.currentUser && state.currentUser.id === userId) {
-          state.currentUser = { ...state.currentUser, ...userData }
-          localStorage.setItem("user", JSON.stringify(state.currentUser))
+        if (state.user && state.user.id === userId) {
+          state.user = { ...state.user, ...userData }
+          localStorage.setItem("user", JSON.stringify(state.user))
         }
       })
       .addCase(updateUser.rejected, (state, action) => {
@@ -248,7 +269,7 @@ const userSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.loading = false
-        state.currentUser = action.payload
+        state.user = action.payload
         state.isAuthenticated = true
       })
       .addCase(loginUser.rejected, (state, action) => {
@@ -257,9 +278,23 @@ const userSlice = createSlice({
         state.isAuthenticated = false
       })
 
+      // Register user
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.loading = false
+        // Don't auto-login after registration
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+
       // Logout user
       .addCase(logoutUser.fulfilled, (state) => {
-        state.currentUser = null
+        state.user = null
         state.isAuthenticated = false
         state.error = null
       })

@@ -3,33 +3,30 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 const BASE_URL = "http://localhost:4000"
 
 // Async thunks for API calls
-export const fetchAllInspections = createAsyncThunk(
-  "inspections/fetchAll",
-  async (filters = {}, { rejectWithValue }) => {
-    try {
-      const queryParams = new URLSearchParams()
+export const fetchInspections = createAsyncThunk("inspections/fetchAll", async (filters = {}, { rejectWithValue }) => {
+  try {
+    const queryParams = new URLSearchParams()
 
-      // Add filters to query params
-      Object.keys(filters).forEach((key) => {
-        if (filters[key]) {
-          queryParams.append(key, filters[key])
-        }
-      })
-
-      const url = `${BASE_URL}/api/inspections${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-      const response = await fetch(url)
-      const data = await response.json()
-
-      if (!data.success) {
-        return rejectWithValue(data.msg || "Failed to fetch inspections")
+    // Add filters to query params
+    Object.keys(filters).forEach((key) => {
+      if (filters[key]) {
+        queryParams.append(key, filters[key])
       }
+    })
 
-      return data.data
-    } catch (error) {
-      return rejectWithValue(error.message)
+    const url = `${BASE_URL}/api/inspections${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+    const response = await fetch(url)
+    const data = await response.json()
+
+    if (!data.success) {
+      return rejectWithValue(data.msg || "Failed to fetch inspections")
     }
-  },
-)
+
+    return data.data
+  } catch (error) {
+    return rejectWithValue(error.message)
+  }
+})
 
 export const fetchInspectionById = createAsyncThunk(
   "inspections/fetchById",
@@ -72,9 +69,9 @@ export const createInspection = createAsyncThunk("inspections/create", async (in
 
 export const updateInspection = createAsyncThunk(
   "inspections/update",
-  async ({ inspectionId, inspectionData }, { rejectWithValue }) => {
+  async ({ id, data: inspectionData }, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${BASE_URL}/api/inspections/${inspectionId}`, {
+      const response = await fetch(`${BASE_URL}/api/inspections/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -87,7 +84,7 @@ export const updateInspection = createAsyncThunk(
         return rejectWithValue(data.msg || "Failed to update inspection")
       }
 
-      return { inspectionId, inspectionData }
+      return { inspectionId: id, inspectionData }
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -137,14 +134,14 @@ export const updateInspectionStatus = createAsyncThunk(
 
 export const updateChecklistItem = createAsyncThunk(
   "inspections/updateChecklistItem",
-  async ({ itemId, is_completed }, { rejectWithValue }) => {
+  async ({ inspectionId, itemId, status, comment }, { rejectWithValue }) => {
     try {
       const response = await fetch(`${BASE_URL}/api/inspections/items/${itemId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ is_completed }),
+        body: JSON.stringify({ status, comment }),
       })
       const data = await response.json()
 
@@ -152,7 +149,7 @@ export const updateChecklistItem = createAsyncThunk(
         return rejectWithValue(data.msg || "Failed to update checklist item")
       }
 
-      return { itemId, is_completed }
+      return { inspectionId, itemId, status, comment }
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -182,7 +179,7 @@ const inspectionSlice = createSlice({
   initialState: {
     inspections: [],
     selectedInspection: null,
-    propertyInspections: [], // New state for property-specific inspections
+    propertyInspections: [],
     loading: false,
     error: null,
     totalCount: 0,
@@ -221,16 +218,16 @@ const inspectionSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch all inspections
-      .addCase(fetchAllInspections.pending, (state) => {
+      .addCase(fetchInspections.pending, (state) => {
         state.loading = true
         state.error = null
       })
-      .addCase(fetchAllInspections.fulfilled, (state, action) => {
+      .addCase(fetchInspections.fulfilled, (state, action) => {
         state.loading = false
         state.inspections = action.payload
         state.totalCount = action.payload.length
       })
-      .addCase(fetchAllInspections.rejected, (state, action) => {
+      .addCase(fetchInspections.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })
@@ -331,13 +328,14 @@ const inspectionSlice = createSlice({
       })
       .addCase(updateChecklistItem.fulfilled, (state, action) => {
         state.loading = false
-        const { itemId, is_completed } = action.payload
+        const { inspectionId, itemId, status, comment } = action.payload
 
         // Update the checklist item in selected inspection if it exists
         if (state.selectedInspection && state.selectedInspection.checklist_items) {
           const itemIndex = state.selectedInspection.checklist_items.findIndex((item) => item.id === itemId)
           if (itemIndex !== -1) {
-            state.selectedInspection.checklist_items[itemIndex].is_completed = is_completed
+            state.selectedInspection.checklist_items[itemIndex].status = status
+            state.selectedInspection.checklist_items[itemIndex].comment = comment
           }
         }
       })

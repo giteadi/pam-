@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { useUsers } from "../contexts/user-context"
-import { usePermissions } from "../hooks/use-permissions"
+import { useState, useEffect } from "react"
+import { useDispatch, useSelector } from "react-redux"
+import { fetchUsers, createUser, updateUser, deleteUser } from "../redux/slices/userSlice"
 
 export default function UserManagement() {
-  const { users, loading, addUser, updateUser, deleteUser } = useUsers()
-  const { hasPermission } = usePermissions()
+  const dispatch = useDispatch()
+  const { users, loading, error, user: currentUser } = useSelector((state) => state.users)
+
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
   const [formData, setFormData] = useState({
@@ -15,6 +16,21 @@ export default function UserManagement() {
     role: "client",
   })
   const [errors, setErrors] = useState({})
+
+  useEffect(() => {
+    dispatch(fetchUsers())
+  }, [dispatch])
+
+  const hasPermission = (permission) => {
+    const userRole = currentUser?.role
+    const permissions = {
+      canViewUsers: userRole === "admin" || userRole === "supervisor",
+      canCreateUser: userRole === "admin",
+      canEditUser: userRole === "admin",
+      canDeleteUser: userRole === "admin",
+    }
+    return permissions[permission] || false
+  }
 
   if (!hasPermission("canViewUsers")) {
     return (
@@ -37,7 +53,7 @@ export default function UserManagement() {
     )
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const newErrors = {}
 
@@ -48,14 +64,18 @@ export default function UserManagement() {
     setErrors(newErrors)
 
     if (Object.keys(newErrors).length === 0) {
-      if (editingUser) {
-        updateUser(editingUser.id, formData)
-      } else {
-        addUser(formData)
+      try {
+        if (editingUser) {
+          await dispatch(updateUser({ id: editingUser.id, data: formData })).unwrap()
+        } else {
+          await dispatch(createUser(formData)).unwrap()
+        }
+        setShowForm(false)
+        setEditingUser(null)
+        setFormData({ name: "", email: "", role: "client" })
+      } catch (err) {
+        console.error("Failed to save user:", err)
       }
-      setShowForm(false)
-      setEditingUser(null)
-      setFormData({ name: "", email: "", role: "client" })
     }
   }
 
@@ -69,9 +89,13 @@ export default function UserManagement() {
     setShowForm(true)
   }
 
-  const handleDelete = (user) => {
+  const handleDelete = async (user) => {
     if (window.confirm(`Are you sure you want to delete "${user.name}"?`)) {
-      deleteUser(user.id)
+      try {
+        await dispatch(deleteUser(user.id)).unwrap()
+      } catch (err) {
+        console.error("Failed to delete user:", err)
+      }
     }
   }
 
@@ -121,6 +145,13 @@ export default function UserManagement() {
         </div>
       </div>
 
+      {/* Error Display */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+        </div>
+      )}
+
       {/* Users List */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-card border border-border rounded-xl overflow-hidden">
@@ -152,7 +183,7 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="px-3 py-1 rounded-full text-xs font-medium bg-accent/10 text-accent border border-accent/20">
-                        {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+                        {user.status?.charAt(0).toUpperCase() + user.status?.slice(1) || "Active"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-card-foreground">{user.lastLogin || "Never"}</td>
@@ -225,6 +256,7 @@ export default function UserManagement() {
                     errors.name ? "border-destructive" : "border-border"
                   }`}
                   placeholder="Enter full name"
+                  disabled={loading}
                 />
                 {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
               </div>
@@ -242,6 +274,7 @@ export default function UserManagement() {
                     errors.email ? "border-destructive" : "border-border"
                   }`}
                   placeholder="Enter email address"
+                  disabled={loading}
                 />
                 {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
               </div>
@@ -255,6 +288,7 @@ export default function UserManagement() {
                   value={formData.role}
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
+                  disabled={loading}
                 >
                   <option value="client">Client</option>
                   <option value="supervisor">Supervisor</option>
@@ -272,14 +306,16 @@ export default function UserManagement() {
                     setErrors({})
                   }}
                   className="px-4 py-2 text-muted-foreground hover:text-foreground border border-border hover:bg-muted rounded-lg transition-colors"
+                  disabled={loading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors"
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium rounded-lg transition-colors disabled:opacity-50"
+                  disabled={loading}
                 >
-                  {editingUser ? "Update User" : "Add User"}
+                  {loading ? "Saving..." : editingUser ? "Update User" : "Add User"}
                 </button>
               </div>
             </form>
