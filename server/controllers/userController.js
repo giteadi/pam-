@@ -62,12 +62,16 @@ exports.getUserById = (req, res) => {
 
 // 3. CREATE new user
 exports.createUser = (req, res) => {
-  const { name, email, password, role } = req.body
+  const { firstName, lastName, name, email, password, role } = req.body
+  console.log("req.body->", req.body)
 
-  if (!name || !email || !password) {
+  // Combine firstName and lastName if provided, otherwise use name
+  const fullName = firstName && lastName ? `${firstName} ${lastName}` : name
+
+  if (!fullName || !email || !password) {
     return res.status(400).json({
       success: false,
-      msg: "Name, email, and password are required",
+      msg: "Name (or firstName/lastName), email, and password are required",
     })
   }
 
@@ -107,7 +111,7 @@ exports.createUser = (req, res) => {
         VALUES (?, ?, ?, ?)
       `
 
-      db.query(sql, [name, email, hashedPassword, role || "client"], (err, result) => {
+      db.query(sql, [fullName, email, hashedPassword, role || "client"], (err, result) => {
         if (err) {
           console.error("Create User Error:", err)
           return res.status(500).json({
@@ -122,7 +126,7 @@ exports.createUser = (req, res) => {
           msg: "User created successfully",
           data: {
             id: result.insertId,
-            name,
+            name: fullName,
             email,
             role: role || "client",
           },
