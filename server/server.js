@@ -1,6 +1,7 @@
 const express = require("express")
-const cors = require("cors") // Added cors import
+const cors = require("cors") 
 const app = express()
+const fileUpload=require("express-fileupload");
 require("dotenv").config()
 
 const PORT = process.env.PORT || 5000
@@ -9,7 +10,14 @@ app.use(cors());
 
 // Middleware
 app.use(express.json())
-
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: "/tmp/",
+    limits: { fileSize: 50 * 1024 * 1024 },
+  }),
+)
+app.use(express.urlencoded({ extended: true }))
 // Routes (inside routes folder)
 const dashboardRoutes = require("./routes/dashboardRoutes")
 const inspectionRoutes = require("./routes/inspectionRoutes")
