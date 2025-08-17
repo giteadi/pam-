@@ -30,8 +30,19 @@ export default function LoginForm() {
     role: "client",
   })
 
-  // Forgot password state
-  const [forgotEmail, setForgotEmail] = useState("")
+  const [otpData, setOtpData] = useState({
+    email: "",
+    otp: "",
+    step: "register", // "register", "verify-otp", "complete"
+  })
+
+  const [forgotPasswordData, setForgotPasswordData] = useState({
+    email: "",
+    otp: "",
+    newPassword: "",
+    confirmPassword: "",
+    step: "email", // "email", "verify-otp", "reset-password", "complete"
+  })
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -63,65 +74,268 @@ export default function LoginForm() {
     }
 
     try {
-      await dispatch(
-        registerUser({
-          email: registerData.email,
-          password: registerData.password,
-          firstName: registerData.firstName,
-          lastName: registerData.lastName,
-          role: registerData.role,
-        }),
-      ).unwrap()
-
-      setSuccess("Registration successful! Please login with your credentials.")
-      setActiveTab("login")
-      setRegisterData({
-        firstName: "",
-        lastName: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        role: "client",
+      const response = await fetch("http://localhost:4000/api/users/send-otp-registration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: registerData.email }),
       })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setOtpData({
+          email: registerData.email,
+          otp: "",
+          step: "verify-otp",
+        })
+        setSuccess("OTP sent to your email. Please verify to complete registration.")
+      } else {
+        throw new Error(data.msg || "Failed to send OTP")
+      }
     } catch (err) {
       console.log("[v0] Registration error:", err)
+      setSuccess("")
     }
   }
 
-  const handleForgotPassword = async (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault()
     setSuccess("")
 
     try {
-      // TODO: Implement forgot password Redux action
-      setSuccess("Password reset link sent to your email!")
-      setForgotEmail("")
+      const verifyResponse = await fetch("http://localhost:4000/api/users/verify-otp-registration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: otpData.email,
+          otp: otpData.otp,
+        }),
+      })
+
+      const verifyData = await verifyResponse.json()
+
+      if (verifyData.success) {
+        // Create user account
+        const result = await dispatch(
+          registerUser({
+            email: registerData.email,
+            password: registerData.password,
+            firstName: registerData.firstName,
+            lastName: registerData.lastName,
+            role: registerData.role,
+            otp: otpData.otp,
+          }),
+        ).unwrap()
+
+        setSuccess("Registration successful! Please login with your credentials.")
+        setActiveTab("login")
+        setRegisterData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          role: "client",
+        })
+        setOtpData({
+          email: "",
+          otp: "",
+          step: "register",
+        })
+      } else {
+        throw new Error(verifyData.msg || "Invalid OTP")
+      }
     } catch (err) {
-      // Handle error
+      console.log("[v0] OTP verification error:", err)
     }
   }
 
-  const demoCredentials = [
-    { email: "admin@demo.com", password: "demo123", role: "admin", label: "Admin User" },
-    { email: "super@demo.com", password: "demo123", role: "supervisor", label: "Supervisor User" },
-    { email: "client@demo.com", password: "demo123", role: "client", label: "Client User" },
-  ]
+  const handleResendOtp = async () => {
+    try {
+      const response = await fetch("http://localhost:4000/api/users/send-otp-registration", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: otpData.email }),
+      })
 
-  const fillDemo = (cred) => {
-    setLoginData({
-      email: cred.email,
-      password: cred.password,
-      role: cred.role,
-    })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSuccess("OTP resent to your email.")
+      } else {
+        throw new Error(data.msg || "Failed to resend OTP")
+      }
+    } catch (err) {
+      console.log("[v0] Resend OTP error:", err)
+    }
+  }
+
+  const handleForgotPasswordStep1 = async (e) => {
+    e.preventDefault()
+    setSuccess("")
+
+    try {
+      const response = await fetch("http://localhost:4000/api/users/send-password-reset-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: forgotPasswordData.email }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setForgotPasswordData({
+          ...forgotPasswordData,
+          step: "verify-otp",
+        })
+        setSuccess("Password reset OTP sent to your email.")
+      } else {
+        throw new Error(data.msg || "Failed to send reset OTP")
+      }
+    } catch (err) {
+      console.log("[v0] Forgot password error:", err)
+    }
+  }
+
+  const handleVerifyResetOtp = async (e) => {
+    e.preventDefault()
+    setSuccess("")
+
+    try {
+      const response = await fetch("http://localhost:4000/api/users/verify-password-reset-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: forgotPasswordData.email,
+          otp: forgotPasswordData.otp,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setForgotPasswordData({
+          ...forgotPasswordData,
+          step: "reset-password",
+        })
+        setSuccess("OTP verified. Please enter your new password.")
+      } else {
+        throw new Error(data.msg || "Invalid OTP")
+      }
+    } catch (err) {
+      console.log("[v0] OTP verification error:", err)
+    }
+  }
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault()
+    setSuccess("")
+
+    if (forgotPasswordData.newPassword !== forgotPasswordData.confirmPassword) {
+      setSuccess("")
+      return
+    }
+
+    if (forgotPasswordData.newPassword.length < 8) {
+      setSuccess("")
+      return
+    }
+
+    try {
+      const response = await fetch("http://localhost:4000/api/users/reset-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: forgotPasswordData.email,
+          newPassword: forgotPasswordData.newPassword,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSuccess("Password reset successfully! You can now login with your new password.")
+        setActiveTab("login")
+        setForgotPasswordData({
+          email: "",
+          otp: "",
+          newPassword: "",
+          confirmPassword: "",
+          step: "email",
+        })
+      } else {
+        throw new Error(data.msg || "Failed to reset password")
+      }
+    } catch (err) {
+      console.log("[v0] Password reset error:", err)
+    }
+  }
+
+  const handleResendResetOtp = async () => {
+    try {
+      const response = await fetch("http://localhost:4000/api/users/send-password-reset-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: forgotPasswordData.email }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.success) {
+        setSuccess("Password reset OTP resent to your email.")
+      } else {
+        throw new Error(data.msg || "Failed to resend OTP")
+      }
+    } catch (err) {
+      console.log("[v0] Resend OTP error:", err)
+    }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-md w-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="min-h-screen flex items-center justify-center bg-background p-3">
+      <div className="w-full max-w-sm">
+        {/* Header - Reduced spacing */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary rounded-lg mb-3">
+            <svg className="w-6 h-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -130,29 +344,41 @@ export default function LoginForm() {
               />
             </svg>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Property Inspector</h2>
-          <p className="mt-2 text-gray-600">Manage your property inspections</p>
+          <h2 className="text-xl font-bold text-foreground">Property Inspector</h2>
+          <p className="text-sm text-muted-foreground">Manage your inspections</p>
         </div>
 
-        {/* Card Container */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Tab Navigation */}
-          <div className="flex border-b border-gray-200">
+        {/* Card Container - More compact */}
+        <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+          {/* Tab Navigation - Reduced padding */}
+          <div className="flex border-b border-border">
             {[
               { id: "login", label: "Login" },
               { id: "register", label: "Register" },
-              { id: "forgot", label: "Forgot Password" },
+              { id: "forgot", label: "Reset" },
             ].map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id)
                   setSuccess("")
+                  setOtpData({
+                    email: "",
+                    otp: "",
+                    step: "register",
+                  })
+                  setForgotPasswordData({
+                    email: "",
+                    otp: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                    step: "email",
+                  })
                 }}
-                className={`flex-1 py-4 px-6 text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 px-3 text-xs font-medium transition-colors ${
                   activeTab === tab.id
-                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    ? "text-accent border-b-2 border-accent bg-accent/5"
+                    : "text-muted-foreground hover:text-card-foreground hover:bg-muted/50"
                 }`}
               >
                 {tab.label}
@@ -160,249 +386,435 @@ export default function LoginForm() {
             ))}
           </div>
 
-          {/* Form Content */}
-          <div className="p-8">
-            {/* Messages */}
+          {/* Form Content - Reduced padding */}
+          <div className="p-4">
+            {/* Messages - More compact */}
             {error && (
-              <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              <div className="mb-3 bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded text-xs">
                 {error}
               </div>
             )}
             {success && (
-              <div className="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+              <div className="mb-3 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-xs">
                 {success}
               </div>
             )}
 
             {/* Login Form */}
             {activeTab === "login" && (
-              <>
-                {/* Demo Credentials */}
-                <div className="mb-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-900 mb-3">Demo Credentials:</h3>
-                  <div className="space-y-2">
-                    {demoCredentials.map((cred) => (
-                      <button
-                        key={cred.role}
-                        type="button"
-                        onClick={() => fillDemo(cred)}
-                        className="w-full text-left px-3 py-2 text-sm bg-white hover:bg-gray-50 rounded border border-gray-200 transition-colors"
-                      >
-                        <div className="font-medium text-gray-900">{cred.label}</div>
-                        <div className="text-gray-500 text-xs">{cred.email}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <form onSubmit={handleLogin} className="space-y-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter your email"
-                      value={loginData.email}
-                      onChange={(e) => {
-                        console.log("[v0] Login email change:", e.target.value)
-                        setLoginData({ ...loginData, email: e.target.value })
-                      }}
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                    <input
-                      type="password"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Enter your password"
-                      value={loginData.password}
-                      onChange={(e) => {
-                        console.log("[v0] Login password change:", e.target.value)
-                        setLoginData({ ...loginData, password: e.target.value })
-                      }}
-                      disabled={loading}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                    <select
-                      value={loginData.role}
-                      onChange={(e) => setLoginData({ ...loginData, role: e.target.value })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      disabled={loading}
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="supervisor">Supervisor</option>
-                      <option value="client">Client</option>
-                    </select>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Signing in...</span>
-                      </div>
-                    ) : (
-                      "Sign In"
-                    )}
-                  </button>
-                </form>
-              </>
-            )}
-
-            {/* Register Form */}
-            {activeTab === "register" && (
-              <form onSubmit={handleRegister} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="First name"
-                      value={registerData.firstName}
-                      onChange={(e) => {
-                        console.log("[v0] Register firstName change:", e.target.value)
-                        setRegisterData({ ...registerData, firstName: e.target.value })
-                      }}
-                      disabled={loading}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
-                    <input
-                      type="text"
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                      placeholder="Last name"
-                      value={registerData.lastName}
-                      onChange={(e) => {
-                        console.log("[v0] Register lastName change:", e.target.value)
-                        setRegisterData({ ...registerData, lastName: e.target.value })
-                      }}
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
+              <form onSubmit={handleLogin} className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                  <label className="block text-xs font-medium text-card-foreground mb-1">Email</label>
                   <input
                     type="email"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Enter your email"
-                    value={registerData.email}
-                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                    placeholder="Enter email"
+                    value={loginData.email}
+                    onChange={(e) => {
+                      console.log("[v0] Login email change:", e.target.value)
+                      setLoginData({ ...loginData, email: e.target.value })
+                    }}
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <label className="block text-xs font-medium text-card-foreground mb-1">Password</label>
                   <input
                     type="password"
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Create a password"
-                    value={registerData.password}
-                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                    placeholder="Enter password"
+                    value={loginData.password}
+                    onChange={(e) => {
+                      console.log("[v0] Login password change:", e.target.value)
+                      setLoginData({ ...loginData, password: e.target.value })
+                    }}
                     disabled={loading}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Confirm your password"
-                    value={registerData.confirmPassword}
-                    onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <label className="block text-xs font-medium text-card-foreground mb-1">Role</label>
                   <select
-                    value={registerData.role}
-                    onChange={(e) => setRegisterData({ ...registerData, role: e.target.value })}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    value={loginData.role}
+                    onChange={(e) => setLoginData({ ...loginData, role: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
                     disabled={loading}
                   >
-                    <option value="client">Client</option>
-                    <option value="supervisor">Supervisor</option>
                     <option value="admin">Admin</option>
+                    <option value="supervisor">Supervisor</option>
+                    <option value="client">Client</option>
                   </select>
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span>Creating account...</span>
+                      <div className="w-3 h-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+                      <span>Signing in...</span>
                     </div>
                   ) : (
-                    "Create Account"
+                    "Sign In"
                   )}
                 </button>
               </form>
             )}
 
-            {/* Forgot Password Form */}
-            {activeTab === "forgot" && (
-              <form onSubmit={handleForgotPassword} className="space-y-6">
-                <div className="text-center mb-6">
-                  <p className="text-gray-600">
-                    Enter your email address and we'll send you a link to reset your password.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    placeholder="Enter your email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    disabled={loading}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {loading ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      <span>Sending...</span>
+            {/* Register Form */}
+            {activeTab === "register" && (
+              <>
+                {otpData.step === "register" && (
+                  <form onSubmit={handleRegister} className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-card-foreground mb-1">First Name</label>
+                        <input
+                          type="text"
+                          required
+                          className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                          placeholder="First"
+                          value={registerData.firstName}
+                          onChange={(e) => {
+                            console.log("[v0] Register firstName change:", e.target.value)
+                            setRegisterData({ ...registerData, firstName: e.target.value })
+                          }}
+                          disabled={loading}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-card-foreground mb-1">Last Name</label>
+                        <input
+                          type="text"
+                          required
+                          className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                          placeholder="Last"
+                          value={registerData.lastName}
+                          onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
+                          disabled={loading}
+                        />
+                      </div>
                     </div>
-                  ) : (
-                    "Send Reset Link"
-                  )}
-                </button>
-              </form>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Email</label>
+                      <input
+                        type="email"
+                        required
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        placeholder="Enter email"
+                        value={registerData.email}
+                        onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Password</label>
+                      <input
+                        type="password"
+                        required
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        placeholder="Create password"
+                        value={registerData.password}
+                        onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Confirm Password</label>
+                      <input
+                        type="password"
+                        required
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        placeholder="Confirm password"
+                        value={registerData.confirmPassword}
+                        onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Role</label>
+                      <select
+                        value={registerData.role}
+                        onChange={(e) => setRegisterData({ ...registerData, role: e.target.value })}
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        disabled={loading}
+                      >
+                        <option value="client">Client</option>
+                        <option value="supervisor">Supervisor</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-3 h-3 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin"></div>
+                          <span>Sending OTP...</span>
+                        </div>
+                      ) : (
+                        "Send Verification Code"
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                {otpData.step === "verify-otp" && (
+                  <form onSubmit={handleVerifyOtp} className="space-y-3">
+                    <div className="text-center mb-3">
+                      <p className="text-xs text-muted-foreground">Enter the 6-digit code sent to</p>
+                      <p className="text-xs font-medium text-card-foreground">{otpData.email}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Verification Code</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength="6"
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors text-center tracking-widest font-mono"
+                        placeholder="000000"
+                        value={otpData.otp}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, 6)
+                          setOtpData({ ...otpData, otp: value })
+                        }}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading || otpData.otp.length !== 6}
+                      className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-3 h-3 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin"></div>
+                          <span>Verifying...</span>
+                        </div>
+                      ) : (
+                        "Verify & Create Account"
+                      )}
+                    </button>
+
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        className="text-xs text-accent hover:text-accent/80 transition-colors"
+                        disabled={loading}
+                      >
+                        Didn't receive code? Resend
+                      </button>
+                    </div>
+
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setOtpData({ ...otpData, step: "register" })}
+                        className="text-xs text-muted-foreground hover:text-card-foreground transition-colors"
+                      >
+                        ← Back to registration
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+
+            {activeTab === "forgot" && (
+              <>
+                {/* Step 1: Enter Email */}
+                {forgotPasswordData.step === "email" && (
+                  <form onSubmit={handleForgotPasswordStep1} className="space-y-3">
+                    <div className="text-center mb-3">
+                      <p className="text-xs text-muted-foreground">Enter your email to receive a reset code</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Email</label>
+                      <input
+                        type="email"
+                        required
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        placeholder="Enter email"
+                        value={forgotPasswordData.email}
+                        onChange={(e) => setForgotPasswordData({ ...forgotPasswordData, email: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full bg-muted hover:bg-muted/80 text-muted-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
+                          <span>Sending...</span>
+                        </div>
+                      ) : (
+                        "Send Reset Code"
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                {/* Step 2: Verify OTP */}
+                {forgotPasswordData.step === "verify-otp" && (
+                  <form onSubmit={handleVerifyResetOtp} className="space-y-3">
+                    <div className="text-center mb-3">
+                      <p className="text-xs text-muted-foreground">Enter the 6-digit code sent to</p>
+                      <p className="text-xs font-medium text-card-foreground">{forgotPasswordData.email}</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Reset Code</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength="6"
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors text-center tracking-widest font-mono"
+                        placeholder="000000"
+                        value={forgotPasswordData.otp}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, "").slice(0, 6)
+                          setForgotPasswordData({ ...forgotPasswordData, otp: value })
+                        }}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading || forgotPasswordData.otp.length !== 6}
+                      className="w-full bg-muted hover:bg-muted/80 text-muted-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
+                          <span>Verifying...</span>
+                        </div>
+                      ) : (
+                        "Verify Code"
+                      )}
+                    </button>
+
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={handleResendResetOtp}
+                        className="text-xs text-accent hover:text-accent/80 transition-colors"
+                        disabled={loading}
+                      >
+                        Didn't receive code? Resend
+                      </button>
+                    </div>
+
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setForgotPasswordData({ ...forgotPasswordData, step: "email" })}
+                        className="text-xs text-muted-foreground hover:text-card-foreground transition-colors"
+                      >
+                        ← Back to email
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Step 3: Reset Password */}
+                {forgotPasswordData.step === "reset-password" && (
+                  <form onSubmit={handleResetPassword} className="space-y-3">
+                    <div className="text-center mb-3">
+                      <p className="text-xs text-muted-foreground">Create a new password for your account</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">New Password</label>
+                      <input
+                        type="password"
+                        required
+                        minLength="8"
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        placeholder="Enter new password"
+                        value={forgotPasswordData.newPassword}
+                        onChange={(e) => setForgotPasswordData({ ...forgotPasswordData, newPassword: e.target.value })}
+                        disabled={loading}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-card-foreground mb-1">Confirm Password</label>
+                      <input
+                        type="password"
+                        required
+                        minLength="8"
+                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        placeholder="Confirm new password"
+                        value={forgotPasswordData.confirmPassword}
+                        onChange={(e) =>
+                          setForgotPasswordData({ ...forgotPasswordData, confirmPassword: e.target.value })
+                        }
+                        disabled={loading}
+                      />
+                    </div>
+
+                    {forgotPasswordData.newPassword &&
+                      forgotPasswordData.confirmPassword &&
+                      forgotPasswordData.newPassword !== forgotPasswordData.confirmPassword && (
+                        <p className="text-xs text-destructive">Passwords do not match</p>
+                      )}
+
+                    {forgotPasswordData.newPassword && forgotPasswordData.newPassword.length < 8 && (
+                      <p className="text-xs text-destructive">Password must be at least 8 characters</p>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={
+                        loading ||
+                        forgotPasswordData.newPassword !== forgotPasswordData.confirmPassword ||
+                        forgotPasswordData.newPassword.length < 8
+                      }
+                      className="w-full bg-muted hover:bg-muted/80 text-muted-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loading ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
+                          <span>Resetting...</span>
+                        </div>
+                      ) : (
+                        "Reset Password"
+                      )}
+                    </button>
+
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setForgotPasswordData({ ...forgotPasswordData, step: "verify-otp" })}
+                        className="text-xs text-muted-foreground hover:text-card-foreground transition-colors"
+                      >
+                        ← Back to verification
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </>
             )}
           </div>
         </div>

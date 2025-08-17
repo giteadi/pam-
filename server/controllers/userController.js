@@ -1,5 +1,19 @@
 const { db } = require("../config/db")
 const bcrypt = require("bcrypt")
+const { sendOtpEmail } = require("../middlewares/mail")
+
+const otpStore = new Map()
+const passwordResetOtpStore = new Map()
+
+const generateAndSendOtp = async (email, store) => {
+  const otp = Math.floor(100000 + Math.random() * 900000).toString()
+  const expires = Date.now() + 15 * 60 * 1000 // 15 minutes
+  store.set(email, { otp, expires, verified: false })
+
+  await sendOtpEmail(email, otp)
+  console.log(`OTP sent to ${email}: ${otp}`)
+  return { otp, expires }
+}
 
 // 1. GET all users
 exports.getAllUsers = (req, res) => {
@@ -62,11 +76,12 @@ exports.getUserById = (req, res) => {
 
 // 3. CREATE new user
 exports.createUser = (req, res) => {
-  const { firstName, lastName, name, email, password, role } = req.body
+  const { firstName, lastName, name, email, password, role, otp } = req.body
   console.log("req.body->", req.body)
 
   // Combine firstName and lastName if provided, otherwise use name
   const fullName = firstName && lastName ? `${firstName} ${lastName}` : name
+  const cleanEmail = email.trim().toLowerCase()
 
   if (!fullName || !email || !password) {
     return res.status(400).json({
@@ -75,10 +90,20 @@ exports.createUser = (req, res) => {
     })
   }
 
+  if (otp) {
+    const record = otpStore.get(cleanEmail)
+    if (!record || record.otp !== otp || Date.now() > record.expires || !record.verified) {
+      return res.status(400).json({
+        success: false,
+        msg: "OTP not verified or invalid/expired. Please verify your email.",
+      })
+    }
+  }
+
   // Check if email already exists
   const checkEmailSql = "SELECT id FROM users WHERE email = ?"
 
-  db.query(checkEmailSql, [email], (checkErr, checkResults) => {
+  db.query(checkEmailSql, [cleanEmail], (checkErr, checkResults) => {
     if (checkErr) {
       console.error("Check Email Error:", checkErr)
       return res.status(500).json({
@@ -111,7 +136,7 @@ exports.createUser = (req, res) => {
         VALUES (?, ?, ?, ?)
       `
 
-      db.query(sql, [fullName, email, hashedPassword, role || "client"], (err, result) => {
+      db.query(sql, [fullName, cleanEmail, hashedPassword, role || "client"], (err, result) => {
         if (err) {
           console.error("Create User Error:", err)
           return res.status(500).json({
@@ -121,13 +146,17 @@ exports.createUser = (req, res) => {
           })
         }
 
+        if (otp) {
+          otpStore.delete(cleanEmail)
+        }
+
         return res.status(201).json({
           success: true,
           msg: "User created successfully",
           data: {
             id: result.insertId,
             name: fullName,
-            email,
+            email: cleanEmail,
             role: role || "client",
           },
         })
@@ -269,4 +298,101 @@ exports.loginUser = (req, res) => {
       })
     })
   })
+}
+
+exports.sendRegistrationOtp = async (req, res) => {
+  const { email } = req.body
+  if (!email) return res.status(400).json({ success: false, msg: "Email is required" })
+
+  const cleanEmail = email.trim().toLowerCase()
+
+  // Check if email is already registered
+  db.query("SELECT id FROM users WHERE email = ?", [cleanEmail], async (err, results) => {
+    if (err) return res.status(500).json({ success: false, msg: "Database error", error: err })
+    if (results.length > 0) {
+      return res.status(400).json({ success: false, msg: "Email already registered" })
+    }
+
+    try {
+      await generateAndSendOtp(cleanEmail, otpStore)
+      return res.status(200).json({ success: true, msg: "OTP sent successfully for registration" })
+    } catch (error) {
+      console.error("Error sending OTP for registration:", error)
+      return res.status(500).json({ success: false, msg: "Failed to send OTP", error: error.message })
+    }
+  })
+}
+
+exports.verifyRegistrationOtp = (req, res) => {
+  const { email, otp } = req.body
+  const cleanEmail = email.trim().toLowerCase()
+  const record = otpStore.get(cleanEmail)
+
+  if (!record || record.otp !== otp || Date.now() > record.expires) {
+    return res.status(400).json({ success: false, msg: "Invalid or expired OTP" })
+  }
+
+  otpStore.set(cleanEmail, { ...record, verified: true })
+  return res.status(200).json({ success: true, msg: "OTP verified successfully" })
+}
+
+exports.sendPasswordResetOtp = async (req, res) => {
+  const { email } = req.body
+  const cleanEmail = email.trim().toLowerCase()
+
+  db.query("SELECT id FROM users WHERE email = ?", [cleanEmail], async (err, results) => {
+    if (err) return res.status(500).json({ success: false, msg: "Database error", error: err })
+    if (results.length === 0) {
+      return res.status(404).json({ success: false, msg: "No account found with this email address" })
+    }
+
+    try {
+      await generateAndSendOtp(cleanEmail, passwordResetOtpStore)
+      return res.status(200).json({ success: true, msg: "Password reset OTP sent to your email" })
+    } catch (error) {
+      console.error("Error sending password reset OTP:", error)
+      return res.status(500).json({ success: false, msg: "Error sending password reset OTP" })
+    }
+  })
+}
+
+exports.verifyPasswordResetOtp = async (req, res) => {
+  const { email, otp } = req.body
+  const cleanEmail = email.trim().toLowerCase()
+  const record = passwordResetOtpStore.get(cleanEmail)
+
+  if (!record || record.otp !== otp || Date.now() > record.expires) {
+    return res.status(400).json({ success: false, msg: "Invalid or expired OTP" })
+  }
+
+  passwordResetOtpStore.set(cleanEmail, { ...record, verified: true })
+  res.status(200).json({ success: true, msg: "OTP verified successfully. You can now reset your password" })
+}
+
+exports.resetPassword = async (req, res) => {
+  const { email, newPassword } = req.body
+  const cleanEmail = email.trim().toLowerCase()
+
+  const storedOtpData = passwordResetOtpStore.get(cleanEmail)
+  if (!storedOtpData || !storedOtpData.verified) {
+    return res.status(400).json({ success: false, msg: "Please verify your email with OTP first" })
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ success: false, msg: "Password must be at least 8 characters long" })
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+    db.query("UPDATE users SET password = ? WHERE email = ?", [hashedPassword, cleanEmail], (err, result) => {
+      if (err) return res.status(500).json({ success: false, msg: "Database error", error: err })
+      if (result.affectedRows === 0) return res.status(404).json({ success: false, msg: "User not found" })
+
+      passwordResetOtpStore.delete(cleanEmail)
+      res.status(200).json({ success: true, msg: "Password reset successfully" })
+    })
+  } catch (error) {
+    console.error("Error resetting password:", error)
+    return res.status(500).json({ success: false, msg: "Error resetting password" })
+  }
 }
