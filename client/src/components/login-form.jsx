@@ -108,6 +108,12 @@ export default function LoginForm() {
     e.preventDefault()
     setSuccess("")
 
+    console.log("[v0] OTP verification started with:", {
+      email: otpData.email,
+      otp: otpData.otp,
+      otpLength: otpData.otp.length,
+    })
+
     try {
       const verifyResponse = await fetch("http://localhost:4000/api/users/verify-otp-registration", {
         method: "POST",
@@ -120,9 +126,17 @@ export default function LoginForm() {
         }),
       })
 
+      console.log("[v0] Verify response status:", verifyResponse.status)
+
+      if (!verifyResponse.ok) {
+        throw new Error(`HTTP error! status: ${verifyResponse.status}`)
+      }
+
       const verifyData = await verifyResponse.json()
+      console.log("[v0] Verify response data:", verifyData)
 
       if (verifyData.success) {
+        console.log("[v0] OTP verified, creating user account...")
         // Create user account
         const result = await dispatch(
           registerUser({
@@ -135,6 +149,7 @@ export default function LoginForm() {
           }),
         ).unwrap()
 
+        console.log("[v0] User registration result:", result)
         setSuccess("Registration successful! Please login with your credentials.")
         setActiveTab("login")
         setRegisterData({
@@ -599,6 +614,13 @@ export default function LoginForm() {
                       type="submit"
                       disabled={loading || otpData.otp.length !== 6}
                       className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        console.log("[v0] Verify button clicked:", {
+                          loading,
+                          otpLength: otpData.otp.length,
+                          disabled: loading || otpData.otp.length !== 6,
+                        })
+                      }}
                     >
                       {loading ? (
                         <div className="flex items-center justify-center space-x-2">
