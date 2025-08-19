@@ -6,6 +6,7 @@ import { AuthProvider } from "./contexts/auth-context"
 import { InspectionProvider } from "./contexts/inspection-context"
 import { PropertyProvider } from "./contexts/property-context"
 import { UserProvider } from "./contexts/user-context"
+import TaskAssignment from "./components/task-assignment"
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
           <InspectionProvider>
             <Routes>
               <Route path="/login" element={<LoginForm />} />
+
               <Route
                 path="/dashboard"
                 element={
@@ -23,6 +25,17 @@ export default function App() {
                   </AuthGuard>
                 }
               />
+
+              {/* Task Assignment Route */}
+              <Route
+                path="/task-assignment"
+                element={
+                  <AuthGuard>
+                    <TaskAssignment />
+                  </AuthGuard>
+                }
+              />
+
               <Route
                 path="/"
                 element={
@@ -31,6 +44,7 @@ export default function App() {
                   </AuthGuard>
                 }
               />
+
               <Route path="*" element={<h1>PAGE NOT FOUND !</h1>} />
             </Routes>
           </InspectionProvider>

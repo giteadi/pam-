@@ -99,21 +99,23 @@ export default function PropertiesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
-      <div className="bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="bg-white shadow-sm border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-serif font-bold text-foreground">Properties</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                Properties
+              </h1>
+              <p className="text-slate-600 mt-2">
                 {hasPermission("canViewAllProperties")
                   ? "Manage your property portfolio"
                   : "View your assigned properties"}
@@ -122,7 +124,7 @@ export default function PropertiesPage() {
             {hasPermission("canCreateProperty") && (
               <button
                 onClick={handleAddProperty}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+                className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -137,33 +139,33 @@ export default function PropertiesPage() {
       {/* Error Display */}
       {error && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl font-medium">{error}</div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-card border border-border rounded-xl p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-8 shadow-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Search */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-card-foreground">Search Properties</label>
+              <label className="text-sm font-semibold text-slate-700">Search Properties</label>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search by name or address..."
-                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               />
             </div>
 
             {/* Type Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-card-foreground">Property Type</label>
+              <label className="text-sm font-semibold text-slate-700">Property Type</label>
               <select
                 value={filterType}
                 onChange={(e) => setFilterType(e.target.value)}
-                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               >
                 <option value="all">All Types</option>
                 <option value="residential">Residential</option>
@@ -175,11 +177,11 @@ export default function PropertiesPage() {
 
             {/* Status Filter */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-card-foreground">Status</label>
+              <label className="text-sm font-semibold text-slate-700">Status</label>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -188,7 +190,7 @@ export default function PropertiesPage() {
               </select>
             </div>
           </div>
-          <div className="mt-4 text-sm text-muted-foreground">
+          <div className="mt-4 text-sm text-slate-600 font-medium">
             Showing {filteredProperties.length} propert{filteredProperties.length !== 1 ? "ies" : "y"}
             {!hasPermission("canViewAllProperties") && " assigned to you"}
           </div>
@@ -235,69 +237,77 @@ export default function PropertiesPage() {
 
       {/* Property Details Modal */}
       {viewingProperty && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-border flex items-center justify-between">
-              <h2 className="text-xl font-serif font-bold text-foreground">Property Details</h2>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-800">Property Details</h2>
               <button
                 onClick={() => setViewingProperty(null)}
-                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-all duration-200"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Property Information</h3>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="font-bold text-slate-800 mb-3">Property Information</h3>
                   <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Name:</span> {viewingProperty.name}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Name:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.name}</span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Type:</span> {viewingProperty.type}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Type:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.type}</span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Units:</span> {viewingProperty.units}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Units:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.units}</span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Status:</span> {viewingProperty.status}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Status:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.status}</span>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Contact Information</h3>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="font-bold text-slate-800 mb-3">Contact Information</h3>
                   <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Owner:</span> {viewingProperty.owner}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Owner:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.owner}</span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Contact:</span> {viewingProperty.contact}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Contact:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.contact}</span>
                     </div>
                   </div>
                 </div>
               </div>
-              <div>
-                <h3 className="font-medium text-foreground mb-2">Address</h3>
-                <p className="text-sm text-card-foreground">{viewingProperty.address}</p>
+              <div className="bg-slate-50 rounded-xl p-4">
+                <h3 className="font-bold text-slate-800 mb-3">Address</h3>
+                <p className="text-sm text-slate-700 font-medium">{viewingProperty.address}</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Inspection Dates</h3>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="font-bold text-slate-800 mb-3">Inspection Dates</h3>
                   <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Last:</span> {viewingProperty.lastInspection}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Last:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.lastInspection}</span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Next:</span> {viewingProperty.nextInspection}
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Next:</span>
+                      <span className="font-medium text-slate-800">{viewingProperty.nextInspection}</span>
                     </div>
                   </div>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Created</h3>
-                  <p className="text-sm text-card-foreground">{viewingProperty.createdAt}</p>
+                <div className="bg-slate-50 rounded-xl p-4">
+                  <h3 className="font-bold text-slate-800 mb-3">Created</h3>
+                  <p className="text-sm text-slate-700 font-medium">{viewingProperty.createdAt}</p>
                 </div>
               </div>
             </div>

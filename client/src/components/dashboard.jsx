@@ -136,28 +136,30 @@ export default function Dashboard() {
   const ActiveComponent = tabs.find((tab) => tab.id === activeTab)?.component || InspectionsPage
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Top Navigation */}
-      <nav className="bg-card border-b border-border">
+      <nav className="bg-white shadow-lg border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
               <div className="flex-shrink-0">
-                <h1 className="text-xl font-serif font-bold text-foreground">Property Inspector</h1>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Property Inspector
+                </h1>
               </div>
 
               {/* Tab Navigation */}
               <div className="hidden md:block">
-                <div className="ml-10 flex items-baseline space-x-4">
+                <div className="ml-10 flex items-baseline space-x-2">
                   {availableTabs.map((tab) => (
                     <Link
                       key={tab.id}
                       to={tab.path}
                       onClick={(e) => handleTabClick(tab.id, e)}
-                      className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 cursor-pointer ${
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center space-x-2 cursor-pointer ${
                         activeTab === tab.id
-                          ? "bg-primary text-primary-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                          ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg transform scale-105"
+                          : "text-slate-600 hover:text-blue-600 hover:bg-blue-50"
                       }`}
                     >
                       {tab.icon}
@@ -171,16 +173,18 @@ export default function Dashboard() {
             {/* User Menu */}
             <div className="flex items-center space-x-4">
               <NotificationPanel />
-              <div className="text-sm text-muted-foreground">
-                Welcome,{" "}
-                <span className="font-medium text-foreground">
+              <div className="text-sm text-slate-600 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+                <span className="text-slate-500">Welcome,</span>{" "}
+                <span className="font-semibold text-slate-800">
                   {user?.firstName} {user?.lastName}
                 </span>
-                <span className="ml-2 px-2 py-1 bg-muted text-muted-foreground rounded text-xs">{user?.role}</span>
+                <span className="ml-2 px-3 py-1 bg-gradient-to-r from-emerald-400 to-teal-400 text-white rounded-full text-xs font-medium">
+                  {user?.role}
+                </span>
               </div>
               <button
                 onClick={handleLogout}
-                className="text-muted-foreground hover:text-foreground px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                className="text-slate-600 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
               >
                 Logout
               </button>
@@ -189,17 +193,17 @@ export default function Dashboard() {
         </div>
 
         {/* Mobile Tab Navigation */}
-        <div className="md:hidden border-t border-border">
+        <div className="md:hidden border-t border-slate-200 bg-slate-50">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {availableTabs.map((tab) => (
               <Link
                 key={tab.id}
                 to={tab.path}
                 onClick={(e) => handleTabClick(tab.id, e)}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-2 cursor-pointer ${
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center space-x-2 cursor-pointer ${
                   activeTab === tab.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white"
+                    : "text-slate-600 hover:text-blue-600 hover:bg-blue-50"
                 }`}
               >
                 {tab.icon}

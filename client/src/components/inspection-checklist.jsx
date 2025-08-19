@@ -147,13 +147,13 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   const getStatusColor = (status) => {
     switch (status) {
       case "pass":
-        return "text-accent"
+        return "text-emerald-600"
       case "fail":
-        return "text-destructive"
+        return "text-red-600"
       case "na":
-        return "text-muted-foreground"
+        return "text-slate-500"
       default:
-        return "text-muted-foreground"
+        return "text-slate-400"
     }
   }
 
@@ -215,28 +215,29 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   }
 
   return (
-    <div className="min-h-screen bg-background page-transition">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
-      <div className="bg-card border-b border-border sticky top-0 z-10 backdrop-blur-sm bg-card/95">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-serif font-bold text-foreground">{inspection.propertyName}</h1>
-              <p className="text-sm text-muted-foreground">
-                Inspector: {inspection.inspectorName} • Started: {inspection.startDate}
+              <h1 className="text-2xl font-bold text-slate-800">{inspection.propertyName}</h1>
+              <p className="text-sm text-slate-600 mt-1">
+                Inspector: <span className="font-medium">{inspection.inspectorName}</span> • Started:{" "}
+                <span className="font-medium">{inspection.startDate}</span>
               </p>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <div className="text-sm font-medium text-foreground flex items-center space-x-2">
+                <div className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
                   <span>{progress}% Complete</span>
                   {(isAutoSaving || loading) && (
-                    <div className="w-3 h-3 border border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                    <div className="w-4 h-4 border-2 border-blue-200 border-t-blue-500 rounded-full animate-spin"></div>
                   )}
                 </div>
-                <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                <div className="w-32 h-3 bg-slate-200 rounded-full overflow-hidden mt-1">
                   <div
-                    className="h-full bg-primary transition-all duration-300"
+                    className="h-full bg-gradient-to-r from-blue-400 to-blue-500 transition-all duration-300"
                     style={{ width: `${progress}%` }}
                   ></div>
                 </div>
@@ -244,14 +245,14 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-secondary-foreground rounded-lg transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-all duration-200 disabled:opacity-50"
               >
                 Save
               </button>
               <button
                 onClick={handleComplete}
                 disabled={loading}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-medium transition-all duration-200 disabled:opacity-50 shadow-lg"
               >
                 Complete
               </button>
@@ -264,18 +265,18 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {template.map((category, categoryIndex) => (
-            <div key={categoryIndex} className="bg-card border border-border rounded-xl overflow-hidden">
+            <div key={categoryIndex} className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
               <button
                 onClick={() => toggleCategory(categoryIndex)}
-                className="w-full px-6 py-4 bg-muted/50 hover:bg-muted/70 transition-all duration-200 flex items-center justify-between"
+                className="w-full px-6 py-5 bg-gradient-to-r from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200 transition-all duration-200 flex items-center justify-between"
               >
-                <h3 className="text-lg font-serif font-semibold text-foreground">{category.category}</h3>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-muted-foreground">
+                <h3 className="text-xl font-bold text-slate-800">{category.category}</h3>
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-slate-600 font-medium bg-white px-3 py-1 rounded-full">
                     {category.items.filter((item) => checklist[item.id]).length} / {category.items.length}
                   </span>
                   <svg
-                    className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${
+                    className={`w-5 h-5 text-slate-500 transition-transform duration-200 ${
                       expandedCategories[categoryIndex] ? "rotate-180" : ""
                     }`}
                     fill="none"
@@ -290,16 +291,19 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               {expandedCategories[categoryIndex] !== false && (
                 <div className="p-6 space-y-4">
                   {category.items.map((item, itemIndex) => (
-                    <div key={item.id} className="border border-border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
+                    <div
+                      key={item.id}
+                      className="border border-slate-200 rounded-xl p-5 bg-slate-50 hover:bg-white transition-all duration-200"
+                    >
+                      <div className="flex items-start justify-between mb-4">
                         <div className="flex items-start space-x-3">
                           {item.required && (
-                            <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded-full">
+                            <span className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full font-semibold border border-red-200">
                               Required
                             </span>
                           )}
                           <div>
-                            <p className="font-medium text-foreground">{item.text}</p>
+                            <p className="font-semibold text-slate-800">{item.text}</p>
                           </div>
                         </div>
                         <div className={`${getStatusColor(getItemStatus(item.id))}`}>
@@ -308,20 +312,20 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                       </div>
 
                       {/* Status Buttons */}
-                      <div className="flex items-center space-x-2 mb-3">
+                      <div className="flex items-center space-x-2 mb-4">
                         {[
-                          { status: "pass", label: "Pass", color: "accent" },
-                          { status: "fail", label: "Fail", color: "destructive" },
-                          { status: "na", label: "N/A", color: "muted" },
+                          { status: "pass", label: "Pass", color: "emerald" },
+                          { status: "fail", label: "Fail", color: "red" },
+                          { status: "na", label: "N/A", color: "slate" },
                         ].map(({ status, label, color }) => (
                           <button
                             key={status}
                             onClick={() => handleItemChange(item.id, status, getItemComment(item.id))}
                             disabled={loading}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-50 ${
                               getItemStatus(item.id) === status
-                                ? `bg-${color} text-${color === "muted" ? "foreground" : color + "-foreground"}`
-                                : `bg-muted text-muted-foreground hover:bg-${color}/10 hover:text-${color}`
+                                ? `bg-${color}-500 text-white shadow-lg`
+                                : `bg-${color}-100 text-${color}-700 hover:bg-${color}-200 border border-${color}-200`
                             }`}
                           >
                             {label}
@@ -331,7 +335,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           <button
                             onClick={() => handleItemChange(item.id, "unchecked")}
                             disabled={loading}
-                            className="px-3 py-1 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/70 transition-all duration-200 disabled:opacity-50"
+                            className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all duration-200 disabled:opacity-50 border border-slate-200"
                           >
                             Clear
                           </button>
@@ -346,7 +350,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           handleItemChange(item.id, getItemStatus(item.id), e.target.value)
                         }}
                         placeholder="Add comments or notes..."
-                        className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors text-sm"
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
                         rows={2}
                         disabled={loading}
                       />
@@ -358,9 +362,9 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
           ))}
 
           {/* Custom Amenities Section */}
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="px-6 py-4 bg-muted/50 flex items-center justify-between">
-              <h3 className="text-lg font-serif font-semibold text-foreground">Custom Amenities</h3>
+          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-slate-800">Custom Amenities</h3>
               <button
                 onClick={() => setShowCustomAmenityInput(!showCustomAmenityInput)}
                 className="px-3 py-1 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-medium transition-colors"
@@ -403,12 +407,17 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               {customAmenities.length > 0 ? (
                 <div className="space-y-3">
                   {customAmenities.map((amenity, index) => (
-                    <div key={amenity.id} className="border border-border rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
+                    <div
+                      key={amenity.id}
+                      className="border border-slate-200 rounded-lg p-5 bg-slate-50 hover:bg-white transition-all duration-200"
+                    >
+                      <div className="flex items-start justify-between mb-4">
                         <div className="flex items-start space-x-3">
-                          <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded-full">Custom</span>
+                          <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full font-semibold border border-primary-200">
+                            Custom
+                          </span>
                           <div className="flex-1">
-                            <p className="font-medium text-foreground">{amenity.text}</p>
+                            <p className="font-semibold text-slate-800">{amenity.text}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -432,20 +441,20 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                       </div>
 
                       {/* Status Buttons */}
-                      <div className="flex items-center space-x-2 mb-3">
+                      <div className="flex items-center space-x-2 mb-4">
                         {[
-                          { status: "pass", label: "Pass", color: "accent" },
-                          { status: "fail", label: "Fail", color: "destructive" },
-                          { status: "na", label: "N/A", color: "muted" },
+                          { status: "pass", label: "Pass", color: "emerald" },
+                          { status: "fail", label: "Fail", color: "red" },
+                          { status: "na", label: "N/A", color: "slate" },
                         ].map(({ status, label, color }) => (
                           <button
                             key={status}
                             onClick={() => handleItemChange(amenity.id, status, getItemComment(amenity.id))}
                             disabled={loading}
-                            className={`px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 disabled:opacity-50 ${
                               getItemStatus(amenity.id) === status
-                                ? `bg-${color} text-${color === "muted" ? "foreground" : color + "-foreground"}`
-                                : `bg-muted text-muted-foreground hover:bg-${color}/10 hover:text-${color}`
+                                ? `bg-${color}-500 text-white shadow-lg`
+                                : `bg-${color}-100 text-${color}-700 hover:bg-${color}-200 border border-${color}-200`
                             }`}
                           >
                             {label}
@@ -455,7 +464,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           <button
                             onClick={() => handleItemChange(amenity.id, "unchecked")}
                             disabled={loading}
-                            className="px-3 py-1 rounded-lg text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/70 transition-all duration-200 disabled:opacity-50"
+                            className="px-4 py-2 rounded-xl text-sm font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all duration-200 disabled:opacity-50 border border-slate-200"
                           >
                             Clear
                           </button>
@@ -470,7 +479,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                           handleItemChange(amenity.id, getItemStatus(amenity.id), e.target.value)
                         }}
                         placeholder="Add comments about this custom amenity..."
-                        className="w-full px-3 py-2 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors text-sm"
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-sm"
                         rows={2}
                         disabled={loading}
                       />
@@ -495,8 +504,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
           </div>
 
           {/* General Notes */}
-          <div className="bg-card border border-border rounded-xl p-6">
-            <h3 className="text-lg font-serif font-semibold text-foreground mb-4">General Notes</h3>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <h3 className="text-xl font-bold text-slate-800 mb-4">General Notes</h3>
             <textarea
               value={notes}
               onChange={(e) => {
@@ -504,8 +513,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                 setNotes(e.target.value)
               }}
               placeholder="Add general inspection notes, observations, or recommendations..."
-              className="w-full px-4 py-3 bg-input border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
-              rows={4}
+              className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              rows={5}
               disabled={loading}
             />
           </div>
