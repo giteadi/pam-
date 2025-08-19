@@ -2,6 +2,8 @@
 
 export default function PropertyCard({ property, userRole, onEdit, onView, onDelete }) {
   const getStatusColor = (status) => {
+    if (!status) return "bg-muted text-muted-foreground border-border"
+
     switch (status.toLowerCase()) {
       case "active":
         return "bg-accent/10 text-accent border-accent/20"
@@ -15,6 +17,8 @@ export default function PropertyCard({ property, userRole, onEdit, onView, onDel
   }
 
   const getTypeColor = (type) => {
+    if (!type) return "bg-muted text-muted-foreground border-border"
+
     switch (type.toLowerCase()) {
       case "residential":
         return "bg-primary/10 text-primary border-primary/20"
