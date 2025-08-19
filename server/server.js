@@ -1,12 +1,13 @@
 const express = require("express")
-const cors = require("cors") 
+const cors = require("cors")
 const app = express()
-const fileUpload=require("express-fileupload");
+const fileUpload = require("express-fileupload")
 require("dotenv").config()
 
 const PORT = process.env.PORT || 5000
 
-app.use(cors());
+// Configure CORS to allow requests from your frontend
+app.use(cors())
 
 // Middleware
 app.use(express.json())
@@ -23,11 +24,13 @@ const dashboardRoutes = require("./routes/dashboardRoutes")
 const inspectionRoutes = require("./routes/inspectionRoutes")
 const propertyRoutes = require("./routes/propertyRoutes")
 const userRoutes = require("./routes/userRoutes")
+const inspectorRoutes = require("./routes/inspectorRoutes")
 
 app.use("/api/dashboard", dashboardRoutes)
 app.use("/api/inspections", inspectionRoutes)
 app.use("/api/properties", propertyRoutes)
 app.use("/api/users", userRoutes)
+app.use("/api/inspector", inspectorRoutes)
 
 // Root test route
 app.get("/", (req, res) => {

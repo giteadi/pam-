@@ -1,10 +1,10 @@
 -- Create Database if not exists
 CREATE DATABASE IF NOT EXISTS property_management;
-
--- Use Database
 USE property_management;
 
--- Users table
+-- =======================
+-- Users Table
+-- =======================
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Properties table
+-- =======================
+-- Properties Table
+-- =======================
 CREATE TABLE IF NOT EXISTS properties (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(150) NOT NULL,
@@ -31,21 +33,67 @@ CREATE TABLE IF NOT EXISTS properties (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Inspections table
+-- =======================
+-- Supervisors Table
+-- =======================
+CREATE TABLE IF NOT EXISTS supervisors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    specialization VARCHAR(100),
+    certification VARCHAR(255),
+    experience_years INT DEFAULT 0,
+    hourly_rate DECIMAL(10,2) DEFAULT 0.00,
+    availability_status ENUM('available', 'busy', 'unavailable') DEFAULT 'available',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_supervisor_user (user_id),
+    INDEX idx_supervisor_availability (availability_status),
+    INDEX idx_supervisor_specialization (specialization)
+);
+
+-- =======================
+-- Inspectors Table
+-- =======================
+CREATE TABLE IF NOT EXISTS inspectors (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    phone VARCHAR(20),
+    specialization VARCHAR(100),
+    certification VARCHAR(100),
+    experience_years INT DEFAULT 0,
+    hourly_rate DECIMAL(10,2) DEFAULT 0.00,
+    availability ENUM('available', 'busy', 'unavailable') DEFAULT 'available',
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- =======================
+-- Inspections Table
+-- =======================
 CREATE TABLE IF NOT EXISTS inspections (
     id INT AUTO_INCREMENT PRIMARY KEY,
     property_id INT NOT NULL,
-    inspector_id INT NOT NULL,
+    inspector_id INT NOT NULL, -- Linked with users table
+    supervisor_id INT NULL,    -- Linked with supervisors table
+    assigned_inspector_id INT NULL, -- Linked with inspectors table
     start_date DATE NOT NULL,
     completed_date DATE NULL,
     status ENUM('in-progress', 'completed', 'pending') DEFAULT 'in-progress',
     progress INT DEFAULT 0,
     notes TEXT,
     FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE,
-    FOREIGN KEY (inspector_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (inspector_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (supervisor_id) REFERENCES supervisors(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_inspector_id) REFERENCES inspectors(id) ON DELETE SET NULL,
+    INDEX idx_inspection_supervisor (supervisor_id)
 );
 
--- Inspection checklist items
+-- =======================
+-- Inspection Items
+-- =======================
 CREATE TABLE IF NOT EXISTS inspection_items (
     id INT AUTO_INCREMENT PRIMARY KEY,
     inspection_id INT NOT NULL,
@@ -56,7 +104,9 @@ CREATE TABLE IF NOT EXISTS inspection_items (
     FOREIGN KEY (inspection_id) REFERENCES inspections(id) ON DELETE CASCADE
 );
 
--- Amenities (for properties)
+-- =======================
+-- Property Amenities
+-- =======================
 CREATE TABLE IF NOT EXISTS property_amenities (
     id INT AUTO_INCREMENT PRIMARY KEY,
     property_id INT NOT NULL,
