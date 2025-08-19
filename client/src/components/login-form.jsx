@@ -13,11 +13,10 @@ export default function LoginForm() {
   const { loading, error, user } = useSelector((state) => state.users)
   const [success, setSuccess] = useState("")
 
-  // Login form state
+  // Login form state - removed role from login data
   const [loginData, setLoginData] = useState({
     email: "",
     password: "",
-    role: "admin",
   })
 
   // Register form state
@@ -54,7 +53,6 @@ export default function LoginForm() {
         loginUser({
           email: loginData.email,
           password: loginData.password,
-          role: loginData.role,
         }),
       ).unwrap()
 
@@ -345,12 +343,12 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-3">
-      <div className="w-full max-w-sm">
-        {/* Header - Reduced spacing */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-primary rounded-lg mb-3">
-            <svg className="w-6 h-6 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4">
+      <div className="w-full max-w-md">
+        {/* Header - enhanced with better styling and gradients */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl mb-4 shadow-lg">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -359,18 +357,18 @@ export default function LoginForm() {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-foreground">Property Inspector</h2>
-          <p className="text-sm text-muted-foreground">Manage your inspections</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Property Inspector</h1>
+          <p className="text-gray-600">Manage your inspections with ease</p>
         </div>
 
-        {/* Card Container - More compact */}
-        <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
-          {/* Tab Navigation - Reduced padding */}
-          <div className="flex border-b border-border">
+        {/* Card Container - enhanced with better shadows and backdrop blur */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden">
+          {/* Tab Navigation - improved with better colors and hover effects */}
+          <div className="flex border-b border-gray-100">
             {[
-              { id: "login", label: "Login" },
-              { id: "register", label: "Register" },
-              { id: "forgot", label: "Reset" },
+              { id: "login", label: "Sign In", icon: "🔐" },
+              { id: "register", label: "Register", icon: "👤" },
+              { id: "forgot", label: "Reset", icon: "🔑" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -390,41 +388,44 @@ export default function LoginForm() {
                     step: "email",
                   })
                 }}
-                className={`flex-1 py-2.5 px-3 text-xs font-medium transition-colors ${
+                className={`flex-1 py-4 px-4 text-sm font-medium transition-all duration-200 ${
                   activeTab === tab.id
-                    ? "text-accent border-b-2 border-accent bg-accent/5"
-                    : "text-muted-foreground hover:text-card-foreground hover:bg-muted/50"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50/50"
+                    : "text-gray-500 hover:text-gray-700 hover:bg-gray-50/50"
                 }`}
               >
+                <span className="mr-2">{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
           </div>
 
-          {/* Form Content - Reduced padding */}
-          <div className="p-4">
-            {/* Messages - More compact */}
+          {/* Form Content - increased padding and improved spacing */}
+          <div className="p-6">
+            {/* Messages - enhanced with better styling */}
             {error && (
-              <div className="mb-3 bg-destructive/10 border border-destructive/20 text-destructive px-3 py-2 rounded text-xs">
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-center">
+                <span className="mr-2">⚠️</span>
                 {error}
               </div>
             )}
             {success && (
-              <div className="mb-3 bg-green-50 border border-green-200 text-green-700 px-3 py-2 rounded text-xs">
+              <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm flex items-center">
+                <span className="mr-2">✅</span>
                 {success}
               </div>
             )}
 
-            {/* Login Form */}
+            {/* Login Form - removed role dropdown and enhanced styling */}
             {activeTab === "login" && (
-              <form onSubmit={handleLogin} className="space-y-3">
+              <form onSubmit={handleLogin} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-medium text-card-foreground mb-1">Email</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                   <input
                     type="email"
                     required
-                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
-                    placeholder="Enter email"
+                    className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                    placeholder="Enter your email"
                     value={loginData.email}
                     onChange={(e) => {
                       console.log("[v0] Login email change:", e.target.value)
@@ -435,12 +436,12 @@ export default function LoginForm() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-card-foreground mb-1">Password</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
                   <input
                     type="password"
                     required
-                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
-                    placeholder="Enter password"
+                    className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                    placeholder="Enter your password"
                     value={loginData.password}
                     onChange={(e) => {
                       console.log("[v0] Login password change:", e.target.value)
@@ -450,49 +451,38 @@ export default function LoginForm() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-card-foreground mb-1">Role</label>
-                  <select
-                    value={loginData.role}
-                    onChange={(e) => setLoginData({ ...loginData, role: e.target.value })}
-                    className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
-                    disabled={loading}
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="client">Client</option>
-                  </select>
-                </div>
-
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   {loading ? (
                     <div className="flex items-center justify-center space-x-2">
-                      <div className="w-3 h-3 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin"></div>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                       <span>Signing in...</span>
                     </div>
                   ) : (
-                    "Sign In"
+                    <span className="flex items-center justify-center">
+                      <span className="mr-2">🚀</span>
+                      Sign In
+                    </span>
                   )}
                 </button>
               </form>
             )}
 
-            {/* Register Form */}
+            {/* Register Form - enhanced styling while keeping role dropdown */}
             {activeTab === "register" && (
               <>
                 {otpData.step === "register" && (
-                  <form onSubmit={handleRegister} className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
+                  <form onSubmit={handleRegister} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-card-foreground mb-1">First Name</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
                         <input
                           type="text"
                           required
-                          className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                          className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                           placeholder="First"
                           value={registerData.firstName}
                           onChange={(e) => {
@@ -503,11 +493,11 @@ export default function LoginForm() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-card-foreground mb-1">Last Name</label>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
                         <input
                           type="text"
                           required
-                          className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                          className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                           placeholder="Last"
                           value={registerData.lastName}
                           onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
@@ -517,12 +507,12 @@ export default function LoginForm() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Email</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                       <input
                         type="email"
                         required
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
-                        placeholder="Enter email"
+                        className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                        placeholder="Enter your email"
                         value={registerData.email}
                         onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                         disabled={loading}
@@ -530,12 +520,12 @@ export default function LoginForm() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Password</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
                       <input
                         type="password"
                         required
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
-                        placeholder="Create password"
+                        className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                        placeholder="Create a password"
                         value={registerData.password}
                         onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                         disabled={loading}
@@ -543,12 +533,12 @@ export default function LoginForm() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Confirm Password</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
                       <input
                         type="password"
                         required
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
-                        placeholder="Confirm password"
+                        className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                        placeholder="Confirm your password"
                         value={registerData.confirmPassword}
                         onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
                         disabled={loading}
@@ -556,11 +546,11 @@ export default function LoginForm() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Role</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
                       <select
                         value={registerData.role}
                         onChange={(e) => setRegisterData({ ...registerData, role: e.target.value })}
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                         disabled={loading}
                       >
                         <option value="client">Client</option>
@@ -572,34 +562,40 @@ export default function LoginForm() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                       {loading ? (
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-3 h-3 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin"></div>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           <span>Sending OTP...</span>
                         </div>
                       ) : (
-                        "Send Verification Code"
+                        <span className="flex items-center justify-center">
+                          <span className="mr-2">📧</span>
+                          Send Verification Code
+                        </span>
                       )}
                     </button>
                   </form>
                 )}
 
                 {otpData.step === "verify-otp" && (
-                  <form onSubmit={handleVerifyOtp} className="space-y-3">
-                    <div className="text-center mb-3">
-                      <p className="text-xs text-muted-foreground">Enter the 6-digit code sent to</p>
-                      <p className="text-xs font-medium text-card-foreground">{otpData.email}</p>
+                  <form onSubmit={handleVerifyOtp} className="space-y-5">
+                    <div className="text-center mb-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mb-3">
+                        <span className="text-2xl">📱</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Enter the 6-digit code sent to</p>
+                      <p className="text-sm font-semibold text-gray-900">{otpData.email}</p>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Verification Code</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Verification Code</label>
                       <input
                         type="text"
                         required
                         maxLength="6"
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors text-center tracking-widest font-mono"
+                        className="w-full px-4 py-3 text-lg bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 text-center tracking-widest font-mono"
                         placeholder="000000"
                         value={otpData.otp}
                         onChange={(e) => {
@@ -613,7 +609,7 @@ export default function LoginForm() {
                     <button
                       type="submit"
                       disabled={loading || otpData.otp.length !== 6}
-                      className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                       onClick={() => {
                         console.log("[v0] Verify button clicked:", {
                           loading,
@@ -624,30 +620,31 @@ export default function LoginForm() {
                     >
                       {loading ? (
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-3 h-3 border-2 border-accent-foreground/30 border-t-accent-foreground rounded-full animate-spin"></div>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           <span>Verifying...</span>
                         </div>
                       ) : (
-                        "Verify & Create Account"
+                        <span className="flex items-center justify-center">
+                          <span className="mr-2">✨</span>
+                          Verify & Create Account
+                        </span>
                       )}
                     </button>
 
-                    <div className="text-center">
+                    <div className="text-center space-y-2">
                       <button
                         type="button"
                         onClick={handleResendOtp}
-                        className="text-xs text-accent hover:text-accent/80 transition-colors"
+                        className="text-sm text-green-600 hover:text-green-700 transition-colors font-medium"
                         disabled={loading}
                       >
                         Didn't receive code? Resend
                       </button>
-                    </div>
-
-                    <div className="text-center">
+                      <br />
                       <button
                         type="button"
                         onClick={() => setOtpData({ ...otpData, step: "register" })}
-                        className="text-xs text-muted-foreground hover:text-card-foreground transition-colors"
+                        className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
                       >
                         ← Back to registration
                       </button>
@@ -657,22 +654,26 @@ export default function LoginForm() {
               </>
             )}
 
+            {/* Forgot Password Form - enhanced styling */}
             {activeTab === "forgot" && (
               <>
                 {/* Step 1: Enter Email */}
                 {forgotPasswordData.step === "email" && (
-                  <form onSubmit={handleForgotPasswordStep1} className="space-y-3">
-                    <div className="text-center mb-3">
-                      <p className="text-xs text-muted-foreground">Enter your email to receive a reset code</p>
+                  <form onSubmit={handleForgotPasswordStep1} className="space-y-5">
+                    <div className="text-center mb-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mb-3">
+                        <span className="text-2xl">🔑</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Enter your email to receive a reset code</p>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Email</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                       <input
                         type="email"
                         required
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
-                        placeholder="Enter email"
+                        className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                        placeholder="Enter your email"
                         value={forgotPasswordData.email}
                         onChange={(e) => setForgotPasswordData({ ...forgotPasswordData, email: e.target.value })}
                         disabled={loading}
@@ -682,35 +683,40 @@ export default function LoginForm() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-muted hover:bg-muted/80 text-muted-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold py-3 px-4 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                       {loading ? (
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           <span>Sending...</span>
                         </div>
                       ) : (
-                        "Send Reset Code"
+                        <span className="flex items-center justify-center">
+                          <span className="mr-2">📧</span>
+                          Send Reset Code
+                        </span>
                       )}
                     </button>
                   </form>
                 )}
 
-                {/* Step 2: Verify OTP */}
                 {forgotPasswordData.step === "verify-otp" && (
-                  <form onSubmit={handleVerifyResetOtp} className="space-y-3">
-                    <div className="text-center mb-3">
-                      <p className="text-xs text-muted-foreground">Enter the 6-digit code sent to</p>
-                      <p className="text-xs font-medium text-card-foreground">{forgotPasswordData.email}</p>
+                  <form onSubmit={handleVerifyResetOtp} className="space-y-5">
+                    <div className="text-center mb-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mb-3">
+                        <span className="text-2xl">📱</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Enter the 6-digit code sent to</p>
+                      <p className="text-sm font-semibold text-gray-900">{forgotPasswordData.email}</p>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Reset Code</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Reset Code</label>
                       <input
                         type="text"
                         required
                         maxLength="6"
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors text-center tracking-widest font-mono"
+                        className="w-full px-4 py-3 text-lg bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 text-center tracking-widest font-mono"
                         placeholder="000000"
                         value={forgotPasswordData.otp}
                         onChange={(e) => {
@@ -724,34 +730,35 @@ export default function LoginForm() {
                     <button
                       type="submit"
                       disabled={loading || forgotPasswordData.otp.length !== 6}
-                      className="w-full bg-muted hover:bg-muted/80 text-muted-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold py-3 px-4 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                       {loading ? (
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           <span>Verifying...</span>
                         </div>
                       ) : (
-                        "Verify Code"
+                        <span className="flex items-center justify-center">
+                          <span className="mr-2">✅</span>
+                          Verify Code
+                        </span>
                       )}
                     </button>
 
-                    <div className="text-center">
+                    <div className="text-center space-y-2">
                       <button
                         type="button"
                         onClick={handleResendResetOtp}
-                        className="text-xs text-accent hover:text-accent/80 transition-colors"
+                        className="text-sm text-orange-600 hover:text-orange-700 transition-colors font-medium"
                         disabled={loading}
                       >
                         Didn't receive code? Resend
                       </button>
-                    </div>
-
-                    <div className="text-center">
+                      <br />
                       <button
                         type="button"
                         onClick={() => setForgotPasswordData({ ...forgotPasswordData, step: "email" })}
-                        className="text-xs text-muted-foreground hover:text-card-foreground transition-colors"
+                        className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
                       >
                         ← Back to email
                       </button>
@@ -761,18 +768,21 @@ export default function LoginForm() {
 
                 {/* Step 3: Reset Password */}
                 {forgotPasswordData.step === "reset-password" && (
-                  <form onSubmit={handleResetPassword} className="space-y-3">
-                    <div className="text-center mb-3">
-                      <p className="text-xs text-muted-foreground">Create a new password for your account</p>
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="text-center mb-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mb-3">
+                        <span className="text-2xl">🔐</span>
+                      </div>
+                      <p className="text-sm text-gray-600">Create a new password for your account</p>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">New Password</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
                       <input
                         type="password"
                         required
                         minLength="8"
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                         placeholder="Enter new password"
                         value={forgotPasswordData.newPassword}
                         onChange={(e) => setForgotPasswordData({ ...forgotPasswordData, newPassword: e.target.value })}
@@ -781,12 +791,12 @@ export default function LoginForm() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-card-foreground mb-1">Confirm Password</label>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm Password</label>
                       <input
                         type="password"
                         required
                         minLength="8"
-                        className="w-full px-3 py-2 text-sm bg-input border border-border rounded focus:ring-1 focus:ring-ring focus:border-ring transition-colors"
+                        className="w-full px-4 py-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                         placeholder="Confirm new password"
                         value={forgotPasswordData.confirmPassword}
                         onChange={(e) =>
@@ -799,11 +809,17 @@ export default function LoginForm() {
                     {forgotPasswordData.newPassword &&
                       forgotPasswordData.confirmPassword &&
                       forgotPasswordData.newPassword !== forgotPasswordData.confirmPassword && (
-                        <p className="text-xs text-destructive">Passwords do not match</p>
+                        <p className="text-sm text-red-600 flex items-center">
+                          <span className="mr-2">⚠️</span>
+                          Passwords do not match
+                        </p>
                       )}
 
                     {forgotPasswordData.newPassword && forgotPasswordData.newPassword.length < 8 && (
-                      <p className="text-xs text-destructive">Password must be at least 8 characters</p>
+                      <p className="text-sm text-red-600 flex items-center">
+                        <span className="mr-2">⚠️</span>
+                        Password must be at least 8 characters
+                      </p>
                     )}
 
                     <button
@@ -813,15 +829,18 @@ export default function LoginForm() {
                         forgotPasswordData.newPassword !== forgotPasswordData.confirmPassword ||
                         forgotPasswordData.newPassword.length < 8
                       }
-                      className="w-full bg-muted hover:bg-muted/80 text-muted-foreground font-medium py-2.5 px-4 rounded text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white font-semibold py-3 px-4 rounded-xl text-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                     >
                       {loading ? (
                         <div className="flex items-center justify-center space-x-2">
-                          <div className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin"></div>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                           <span>Resetting...</span>
                         </div>
                       ) : (
-                        "Reset Password"
+                        <span className="flex items-center justify-center">
+                          <span className="mr-2">🔄</span>
+                          Reset Password
+                        </span>
                       )}
                     </button>
 
@@ -829,7 +848,7 @@ export default function LoginForm() {
                       <button
                         type="button"
                         onClick={() => setForgotPasswordData({ ...forgotPasswordData, step: "verify-otp" })}
-                        className="text-xs text-muted-foreground hover:text-card-foreground transition-colors"
+                        className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
                       >
                         ← Back to verification
                       </button>

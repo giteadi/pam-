@@ -7,6 +7,11 @@ import { InspectionProvider } from "./contexts/inspection-context"
 import { PropertyProvider } from "./contexts/property-context"
 import { UserProvider } from "./contexts/user-context"
 import TaskAssignment from "./components/task-assignment"
+import InspectionsPage from "./components/inspections-page"
+import PropertiesPage from "./components/properties-page"
+import UserManagement from "./components/user-management"
+import ProgressMonitoring from "./components/progress-monitoring"
+import Navbar from "./components/Navbar"
 
 export default function App() {
   return (
@@ -21,17 +26,58 @@ export default function App() {
                 path="/dashboard"
                 element={
                   <AuthGuard>
+                    <Navbar />
                     <Dashboard />
                   </AuthGuard>
                 }
               />
 
-              {/* Task Assignment Route */}
               <Route
                 path="/task-assignment"
                 element={
                   <AuthGuard>
+                    <Navbar />
                     <TaskAssignment />
+                  </AuthGuard>
+                }
+              />
+
+              <Route
+                path="/inspections"
+                element={
+                  <AuthGuard>
+                    <Navbar />
+                    <InspectionsPage />
+                  </AuthGuard>
+                }
+              />
+
+              <Route
+                path="/properties"
+                element={
+                  <AuthGuard>
+                    <Navbar />
+                    <PropertiesPage />
+                  </AuthGuard>
+                }
+              />
+
+              <Route
+                path="/users"
+                element={
+                  <AuthGuard>
+                    <Navbar />
+                    <UserManagement />
+                  </AuthGuard>
+                }
+              />
+
+              <Route
+                path="/progress"
+                element={
+                  <AuthGuard>
+                    <Navbar />
+                    <ProgressMonitoring />
                   </AuthGuard>
                 }
               />
@@ -40,6 +86,7 @@ export default function App() {
                 path="/"
                 element={
                   <AuthGuard>
+                    <Navbar />
                     <Dashboard />
                   </AuthGuard>
                 }

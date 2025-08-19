@@ -8,51 +8,88 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  const login = (email, password, role) => {
-    // Simulate login logic
-    const demoCredentials = [
-      { email: "admin@demo.com", password: "demo123", role: "admin" },
-      { email: "super@demo.com", password: "demo123", role: "supervisor" },
-      { email: "client@demo.com", password: "demo123", role: "client" },
-    ]
+  const login = async (email, password) => {
+    try {
+      // In a real app, this would be an API call to your backend
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
 
-    const validUser = demoCredentials.find(
-      (cred) => cred.email === email && cred.password === password && cred.role === role,
-    )
+      const result = await response.json()
 
-    if (validUser) {
-      const userData = {
-        id: Math.random().toString(36).substr(2, 9),
-        email: validUser.email,
-        role: validUser.role,
-        firstName: validUser.role.charAt(0).toUpperCase() + validUser.role.slice(1),
-        lastName: "User",
+      if (result.success) {
+        const userData = {
+          id: result.data.id,
+          email: result.data.email,
+          role: result.data.role,
+          firstName: result.data.name.split(" ")[0],
+          lastName: result.data.name.split(" ")[1] || "",
+        }
+        setUser(userData)
+        setIsAuthenticated(true)
+        return { success: true, user: userData }
       }
-      setUser(userData)
-      setIsAuthenticated(true)
-      return { success: true, user: userData }
-    }
 
-    return { success: false, error: "Invalid credentials" }
+      return { success: false, error: result.msg || "Login failed" }
+    } catch (error) {
+      // Fallback to demo credentials for development
+      const demoCredentials = [
+        { email: "admin@demo.com", password: "demo123", role: "admin", name: "Admin User" },
+        { email: "super@demo.com", password: "demo123", role: "supervisor", name: "Supervisor User" },
+        { email: "client@demo.com", password: "demo123", role: "client", name: "Client User" },
+      ]
+
+      const validUser = demoCredentials.find((cred) => cred.email === email && cred.password === password)
+
+      if (validUser) {
+        const userData = {
+          id: Math.random().toString(36).substr(2, 9),
+          email: validUser.email,
+          role: validUser.role,
+          firstName: validUser.name.split(" ")[0],
+          lastName: validUser.name.split(" ")[1] || "",
+        }
+        setUser(userData)
+        setIsAuthenticated(true)
+        return { success: true, user: userData }
+      }
+
+      return { success: false, error: "Invalid credentials" }
+    }
   }
 
-  const register = (email, password, firstName, lastName, role) => {
-    // Simulate registration logic
-    if (email && password && firstName && lastName) {
-      const userData = {
-        id: Math.random().toString(36).substr(2, 9),
-        email,
-        role,
-        firstName,
-        lastName,
-      }
-      // In a real app, you wouldn't auto-login after registration
-      // setUser(userData)
-      // setIsAuthenticated(true)
-      return { success: true, user: userData }
-    }
+  const register = async (email, password, firstName, lastName) => {
+    try {
+      // In a real app, this would be an API call to your backend
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          password,
+        }),
+      })
 
-    return { success: false, error: "Registration failed" }
+      const result = await response.json()
+      return result
+    } catch (error) {
+      // Fallback for development
+      if (email && password && firstName && lastName) {
+        return {
+          success: true,
+          msg: "Registration successful. Please login with your credentials.",
+        }
+      }
+      return { success: false, error: "Registration failed" }
+    }
   }
 
   const logout = () => {
