@@ -11,7 +11,7 @@ import InspectionsPage from "./components/inspections-page"
 import PropertiesPage from "./components/properties-page"
 import UserManagement from "./components/user-management"
 import ProgressMonitoring from "./components/progress-monitoring"
-import Navbar from "./components/Navbar"
+
 
 export default function App() {
   return (
@@ -26,7 +26,7 @@ export default function App() {
                 path="/dashboard"
                 element={
                   <AuthGuard>
-                    <Navbar />
+                    
                     <Dashboard />
                   </AuthGuard>
                 }
@@ -36,7 +36,7 @@ export default function App() {
                 path="/task-assignment"
                 element={
                   <AuthGuard>
-                    <Navbar />
+                
                     <TaskAssignment />
                   </AuthGuard>
                 }
@@ -46,7 +46,7 @@ export default function App() {
                 path="/inspections"
                 element={
                   <AuthGuard>
-                    <Navbar />
+                
                     <InspectionsPage />
                   </AuthGuard>
                 }
@@ -56,7 +56,7 @@ export default function App() {
                 path="/properties"
                 element={
                   <AuthGuard>
-                    <Navbar />
+                
                     <PropertiesPage />
                   </AuthGuard>
                 }
@@ -66,7 +66,7 @@ export default function App() {
                 path="/users"
                 element={
                   <AuthGuard>
-                    <Navbar />
+                
                     <UserManagement />
                   </AuthGuard>
                 }
@@ -76,7 +76,7 @@ export default function App() {
                 path="/progress"
                 element={
                   <AuthGuard>
-                    <Navbar />
+                
                     <ProgressMonitoring />
                   </AuthGuard>
                 }
@@ -86,7 +86,7 @@ export default function App() {
                 path="/"
                 element={
                   <AuthGuard>
-                    <Navbar />
+                
                     <Dashboard />
                   </AuthGuard>
                 }

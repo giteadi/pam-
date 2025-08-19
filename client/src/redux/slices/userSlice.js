@@ -92,6 +92,7 @@ export const deleteUser = createAsyncThunk("users/delete", async (userId, { reje
   }
 })
 
+// Async thunk for user login
 export const loginUser = createAsyncThunk("users/login", async (credentials, { rejectWithValue }) => {
   try {
     const response = await fetch(`${BASE_URL}/api/users/login`, {
@@ -116,6 +117,7 @@ export const loginUser = createAsyncThunk("users/login", async (credentials, { r
   }
 })
 
+// Async thunk for user registration
 export const registerUser = createAsyncThunk("users/register", async (userData, { rejectWithValue }) => {
   try {
     const response = await fetch(`${BASE_URL}/api/users`, {
