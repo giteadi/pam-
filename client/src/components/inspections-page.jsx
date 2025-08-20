@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
-import { fetchInspections, createInspection, updateInspection } from "../redux/slices/inspectionSlice"
+import { fetchInspections, createInspection, updateInspection, scheduleInspection } from "../redux/slices/inspectionSlice"
 import { fetchProperties } from "../redux/slices/propertySlice"
 import { fetchInspectors } from "../redux/slices/inspectorSlice"
 
@@ -26,18 +26,26 @@ export default function EnhancedInspectionsPage() {
     notes: "",
   })
   const [errors, setErrors] = useState({})
-  const [editingInspector, setEditingInspector] = useState(null)
 
   useEffect(() => {
+    console.log("[Page] Component mounted, fetching data...")
     dispatch(fetchInspections())
     dispatch(fetchProperties())
   }, [dispatch])
 
   useEffect(() => {
     if (showForm) {
+      console.log("[Page] Form opened, fetching inspectors...")
       dispatch(fetchInspectors())
     }
   }, [showForm, dispatch])
+
+  // Debug logs
+  useEffect(() => {
+    console.log("[Page] Inspections updated:", inspections)
+    console.log("[Page] Loading state:", loading)
+    console.log("[Page] Error state:", error)
+  }, [inspections, loading, error])
 
   const filteredInspections = inspections.filter((inspection) => {
     const matchesSearch =
@@ -50,7 +58,7 @@ export default function EnhancedInspectionsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    console.log("[v0] Form data before validation:", formData)
+    console.log("[Page] Form data before validation:", formData)
 
     const newErrors = {}
 
@@ -65,8 +73,8 @@ export default function EnhancedInspectionsPage() {
         const selectedProperty = properties.find((p) => p.id === Number.parseInt(formData.propertyId))
         const selectedInspector = inspectors.find((i) => i.id === Number.parseInt(formData.inspectorId))
 
-        console.log("[v0] Selected property:", selectedProperty)
-        console.log("[v0] Selected inspector:", selectedInspector)
+        console.log("[Page] Selected property:", selectedProperty)
+        console.log("[Page] Selected inspector:", selectedInspector)
 
         if (!selectedInspector) {
           setErrors({ inspectorId: "Selected inspector not found. Please refresh and try again." })
@@ -78,22 +86,29 @@ export default function EnhancedInspectionsPage() {
           inspector_id: Number.parseInt(formData.inspectorId),
           start_date: formData.scheduledDate,
           notes: formData.notes || "",
-          // Frontend display fields
+          inspection_type: formData.type,
+          // Include frontend display fields for immediate UI update
           propertyName: selectedProperty?.name || "Unknown Property",
           inspectorName: selectedInspector?.name || "Unknown Inspector",
-          type: formData.type,
           status: "scheduled",
           progress: 0,
         }
 
-        console.log("[v0] Final inspection data being sent:", inspectionData)
+        console.log("[Page] Final inspection data being sent:", inspectionData)
 
         if (editingInspection) {
           await dispatch(updateInspection({ id: editingInspection.id, data: inspectionData })).unwrap()
         } else {
-          await dispatch(createInspection(inspectionData)).unwrap()
+          // Use scheduleInspection for new inspections as it matches your backend API
+          const scheduleData = {
+            ...inspectionData,
+            scheduled_date: formData.scheduledDate,
+            created_by: user?.id || 1, // Use actual user ID or default
+          }
+          await dispatch(scheduleInspection(scheduleData)).unwrap()
         }
 
+        // Reset form and close modal
         setShowForm(false)
         setEditingInspection(null)
         setFormData({
@@ -104,8 +119,11 @@ export default function EnhancedInspectionsPage() {
           notes: "",
         })
         setErrors({})
+
+        // Refresh the inspections list
+        dispatch(fetchInspections())
       } catch (err) {
-        console.error("[v0] Failed to save inspection:", err)
+        console.error("[Page] Failed to save inspection:", err)
 
         if (err.message && err.message.includes("foreign key constraint")) {
           if (err.message.includes("inspector_id")) {
@@ -113,21 +131,25 @@ export default function EnhancedInspectionsPage() {
           } else {
             setErrors({ general: "Invalid data reference. Please check your selections." })
           }
+        } else if (err.message && err.message.includes("Inspector with ID")) {
+          setErrors({ inspectorId: err.message })
         } else {
-          console.error("[v0] Error details:", err.message)
+          setErrors({ general: err.message || "Failed to save inspection. Please try again." })
+          console.error("[Page] Error details:", err)
         }
       }
     } else {
-      console.log("[v0] Validation errors:", newErrors)
+      console.log("[Page] Validation errors:", newErrors)
     }
   }
 
   const handleEdit = (inspection) => {
+    console.log("[Page] Editing inspection:", inspection)
     setEditingInspection(inspection)
     setFormData({
-      propertyId: inspection.propertyId || "",
-      inspectorId: inspection.assigned_inspector_id || "",
-      scheduledDate: inspection.scheduledDate || "",
+      propertyId: inspection.propertyId?.toString() || "",
+      inspectorId: inspection.inspectorId?.toString() || inspection.assigned_inspector_id?.toString() || "",
+      scheduledDate: inspection.scheduledDate || inspection.startDate || "",
       type: inspection.type || "routine",
       notes: inspection.notes || "",
     })
@@ -143,6 +165,7 @@ export default function EnhancedInspectionsPage() {
       case "completed":
         return "bg-green-100 text-green-800"
       case "in-progress":
+      case "in_progress":
         return "bg-blue-100 text-blue-800"
       case "scheduled":
         return "bg-yellow-100 text-yellow-800"
@@ -150,6 +173,15 @@ export default function EnhancedInspectionsPage() {
         return "bg-red-100 text-red-800"
       default:
         return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A"
+    try {
+      return new Date(dateString).toLocaleDateString()
+    } catch (error) {
+      return "Invalid Date"
     }
   }
 
@@ -162,6 +194,11 @@ export default function EnhancedInspectionsPage() {
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Property Inspections</h1>
               <p className="text-slate-600 mt-1">Manage and track all property inspections</p>
+              {error && (
+                <div className="mt-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {error}
+                </div>
+              )}
             </div>
             <button
               onClick={() => setShowForm(true)}
@@ -195,6 +232,7 @@ export default function EnhancedInspectionsPage() {
               <option value="all">All Status</option>
               <option value="scheduled">Scheduled</option>
               <option value="in-progress">In Progress</option>
+              <option value="in_progress">In Progress</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -224,7 +262,11 @@ export default function EnhancedInspectionsPage() {
                 />
               </svg>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">No inspections found</h3>
-              <p className="text-slate-600">Get started by scheduling your first inspection.</p>
+              <p className="text-slate-600">
+                {searchTerm || filterStatus !== "all" 
+                  ? "Try adjusting your search or filter criteria."
+                  : "Get started by scheduling your first inspection."}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -244,22 +286,24 @@ export default function EnhancedInspectionsPage() {
                   {filteredInspections.map((inspection) => (
                     <tr key={inspection.id} className="hover:bg-slate-50 transition-colors duration-150">
                       <td className="py-4 px-6">
-                        <div className="font-semibold text-slate-900">{inspection.propertyName}</div>
+                        <div className="font-semibold text-slate-900">{inspection.propertyName || 'N/A'}</div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="text-slate-700">{inspection.inspectorName}</div>
+                        <div className="text-slate-700">{inspection.inspectorName || 'N/A'}</div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="text-slate-700">{new Date(inspection.scheduledDate).toLocaleDateString()}</div>
+                        <div className="text-slate-700">
+                          {formatDate(inspection.scheduledDate || inspection.startDate)}
+                        </div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="text-slate-700 capitalize">{inspection.type}</div>
+                        <div className="text-slate-700 capitalize">{inspection.type || 'routine'}</div>
                       </td>
                       <td className="py-4 px-6">
                         <span
                           className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(inspection.status)}`}
                         >
-                          {inspection.status}
+                          {inspection.status || 'scheduled'}
                         </span>
                       </td>
                       <td className="py-4 px-6">
@@ -349,6 +393,13 @@ export default function EnhancedInspectionsPage() {
                   </button>
                 </div>
 
+                {/* General Error Display */}
+                {errors.general && (
+                  <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    {errors.general}
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Property Selection */}
                   <div className="space-y-3">
@@ -414,6 +465,7 @@ export default function EnhancedInspectionsPage() {
                     )}
                   </div>
 
+                  {/* Inspector Selection */}
                   <div className="space-y-3">
                     <label htmlFor="inspectorId" className="text-sm font-semibold text-slate-700">
                       Assign Inspector *
@@ -560,26 +612,28 @@ export default function EnhancedInspectionsPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Property</label>
-                    <p className="text-slate-900 mt-1">{viewingInspection.propertyName}</p>
+                    <p className="text-slate-900 mt-1">{viewingInspection.propertyName || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Inspector</label>
-                    <p className="text-slate-900 mt-1">{viewingInspection.inspectorName}</p>
+                    <p className="text-slate-900 mt-1">{viewingInspection.inspectorName || 'N/A'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Scheduled Date</label>
-                    <p className="text-slate-900 mt-1">{new Date(viewingInspection.scheduledDate).toLocaleString()}</p>
+                    <p className="text-slate-900 mt-1">
+                      {formatDate(viewingInspection.scheduledDate || viewingInspection.startDate)}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Type</label>
-                    <p className="text-slate-900 mt-1 capitalize">{viewingInspection.type}</p>
+                    <p className="text-slate-900 mt-1 capitalize">{viewingInspection.type || 'routine'}</p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Status</label>
                     <span
                       className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mt-1 ${getStatusColor(viewingInspection.status)}`}
                     >
-                      {viewingInspection.status}
+                      {viewingInspection.status || 'scheduled'}
                     </span>
                   </div>
                   <div>

@@ -17,33 +17,68 @@ const handleApiResponse = async (response) => {
   return data
 }
 
+// Transform API data to match frontend expectations
+const transformInspectionData = (apiData) => {
+  return {
+    id: apiData.id,
+    propertyId: apiData.property_id,
+    propertyName: apiData.property_name || "Unknown Property",
+    inspectorId: apiData.inspector_id,
+    assigned_inspector_id: apiData.inspector_id, // For compatibility
+    inspectorName: apiData.inspector_name || "Unknown Inspector",
+    startDate: apiData.start_date,
+    scheduledDate: apiData.start_date, // For compatibility with frontend
+    completedDate: apiData.completed_date,
+    status: apiData.status || "scheduled",
+    progress: apiData.progress || 0,
+    type: apiData.inspection_type || "routine",
+    notes: apiData.notes || "",
+    totalItems: apiData.total_items || 0,
+    completedItems: apiData.completed_items || 0,
+    checklistItems: apiData.checklist_items || [],
+    customAmenities: apiData.custom_amenities || [],
+    checklist: apiData.checklist || {}
+  }
+}
+
 const mockInspections = [
   {
     id: 1,
-    property_id: 1,
-    inspector_id: 2,
+    propertyId: 1,
+    propertyName: "123 Main St",
+    inspectorId: 1,
+    assigned_inspector_id: 1,
+    inspectorName: "Jane Smith",
+    startDate: "2024-01-15T09:00:00",
+    scheduledDate: "2024-01-15T09:00:00",
     status: "scheduled",
-    scheduled_date: "2024-01-15",
-    property_name: "123 Main St",
-    inspector_name: "Jane Smith",
-    checklist_items: [
-      { id: 1, item: "Check electrical systems", status: "pending", comment: "" },
-      { id: 2, item: "Inspect plumbing", status: "pending", comment: "" },
-      { id: 3, item: "Verify HVAC operation", status: "pending", comment: "" },
-    ],
+    progress: 0,
+    type: "routine",
+    notes: "Initial inspection",
+    totalItems: 0,
+    completedItems: 0,
+    checklistItems: [],
+    customAmenities: [],
+    checklist: {}
   },
   {
     id: 2,
-    property_id: 2,
-    inspector_id: 2,
-    status: "in_progress",
-    scheduled_date: "2024-01-14",
-    property_name: "456 Oak Ave",
-    inspector_name: "Jane Smith",
-    checklist_items: [
-      { id: 4, item: "Check electrical systems", status: "passed", comment: "All systems working" },
-      { id: 5, item: "Inspect plumbing", status: "in_progress", comment: "" },
-    ],
+    propertyId: 2,
+    propertyName: "456 Oak Ave",
+    inspectorId: 1,
+    assigned_inspector_id: 1,
+    inspectorName: "Jane Smith",
+    startDate: "2024-01-14T10:00:00",
+    scheduledDate: "2024-01-14T10:00:00",
+    status: "in-progress",
+    progress: 45,
+    type: "maintenance",
+    notes: "Follow-up inspection",
+    totalItems: 0,
+    completedItems: 0,
+    checklistItems: [],
+    customAmenities: [],
+    checklist: {}
   },
 ]
 
@@ -58,14 +93,22 @@ export const fetchInspections = createAsyncThunk("inspections/fetchAll", async (
     })
 
     const url = `${BASE_URL}/api/inspections${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
+    console.log("[Redux] Fetching inspections from:", url)
+    
     const response = await fetch(url)
     const data = await handleApiResponse(response)
+
+    console.log("[Redux] API Response:", data)
 
     if (!data.success) {
       return rejectWithValue(data.msg || "Failed to fetch inspections")
     }
 
-    return data.data
+    // Transform the API data to match frontend expectations
+    const transformedData = data.data.map(transformInspectionData)
+    console.log("[Redux] Transformed data:", transformedData)
+
+    return transformedData
   } catch (error) {
     console.warn("API call failed, using mock data:", error.message)
     return mockInspections
@@ -83,7 +126,7 @@ export const fetchInspectionById = createAsyncThunk(
         return rejectWithValue(data.msg || "Failed to fetch inspection")
       }
 
-      return data.data
+      return transformInspectionData(data.data)
     } catch (error) {
       console.warn("API call failed, using mock data:", error.message)
       return mockInspections.find((i) => i.id == inspectionId) || mockInspections[0]
@@ -93,6 +136,8 @@ export const fetchInspectionById = createAsyncThunk(
 
 export const createInspection = createAsyncThunk("inspections/create", async (inspectionData, { rejectWithValue }) => {
   try {
+    console.log("[Redux] Creating inspection with data:", inspectionData)
+    
     const response = await fetch(`${BASE_URL}/api/inspections`, {
       method: "POST",
       headers: {
@@ -102,12 +147,15 @@ export const createInspection = createAsyncThunk("inspections/create", async (in
     })
     const data = await handleApiResponse(response)
 
+    console.log("[Redux] Create inspection response:", data)
+
     if (!data.success) {
       return rejectWithValue(data.msg || "Failed to create inspection")
     }
 
-    return data.data
+    return transformInspectionData(data.data)
   } catch (error) {
+    console.error("[Redux] Create inspection error:", error)
     return rejectWithValue(error.message)
   }
 })
@@ -116,6 +164,8 @@ export const updateInspection = createAsyncThunk(
   "inspections/update",
   async ({ id, data: inspectionData }, { rejectWithValue }) => {
     try {
+      console.log("[Redux] Updating inspection:", id, inspectionData)
+      
       const response = await fetch(`${BASE_URL}/api/inspections/${id}`, {
         method: "PUT",
         headers: {
@@ -129,8 +179,9 @@ export const updateInspection = createAsyncThunk(
         return rejectWithValue(data.msg || "Failed to update inspection")
       }
 
-      return { inspectionId: id, inspectionData }
+      return { inspectionId: id, inspectionData: transformInspectionData({ id, ...inspectionData }) }
     } catch (error) {
+      console.error("[Redux] Update inspection error:", error)
       return rejectWithValue(error.message)
     }
   },
@@ -212,7 +263,7 @@ export const fetchInspectionsByProperty = createAsyncThunk(
         return rejectWithValue(data.msg || "Failed to fetch inspections for property")
       }
 
-      return data.data
+      return data.data.map(transformInspectionData)
     } catch (error) {
       return rejectWithValue(error.message)
     }
@@ -223,6 +274,8 @@ export const scheduleInspection = createAsyncThunk(
   "inspections/schedule",
   async (scheduleData, { rejectWithValue }) => {
     try {
+      console.log("[Redux] Scheduling inspection with data:", scheduleData)
+      
       const response = await fetch(`${BASE_URL}/api/inspections/schedule`, {
         method: "POST",
         headers: {
@@ -232,12 +285,15 @@ export const scheduleInspection = createAsyncThunk(
       })
       const data = await handleApiResponse(response)
 
+      console.log("[Redux] Schedule inspection response:", data)
+
       if (!data.success) {
         return rejectWithValue(data.msg || "Failed to schedule inspection")
       }
 
-      return data.data
+      return transformInspectionData(data.data)
     } catch (error) {
+      console.error("[Redux] Schedule inspection error:", error)
       return rejectWithValue(error.message)
     }
   },
@@ -299,6 +355,9 @@ const inspectionSlice = createSlice({
       .addCase(fetchInspections.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
+        // Set mock data on error
+        state.inspections = mockInspections
+        state.totalCount = mockInspections.length
       })
       .addCase(createInspection.pending, (state) => {
         state.loading = true
