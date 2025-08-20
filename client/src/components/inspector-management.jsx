@@ -12,7 +12,7 @@ import {
   clearError,
   setSelectedInspector,
   clearSelectedInspector,
-} from "../redux/slices/inspectorSlice" 
+} from "../redux/slices/inspectorSlice"
 
 export default function InspectorManagement() {
   const dispatch = useDispatch()
@@ -71,20 +71,12 @@ export default function InspectorManagement() {
       if (data.success && data.data) {
         setProperties(data.data)
       } else {
-        console.warn("Property API returned unexpected format, using fallback data")
-        setProperties([
-          { id: 1, name: "Sun Villa", address: "123 Main St" },
-          { id: 2, name: "Ocean View Apartment", address: "456 Beach Ave" },
-          { id: 3, name: "Mountain Lodge", address: "789 Hill Rd" },
-        ])
+        console.warn("Property API returned unexpected format")
+        setProperties([])
       }
     } catch (error) {
       console.error("Failed to fetch properties:", error)
-      setProperties([
-        { id: 1, name: "Sun Villa", address: "123 Main St" },
-        { id: 2, name: "Ocean View Apartment", address: "456 Beach Ave" },
-        { id: 3, name: "Mountain Lodge", address: "789 Hill Rd" },
-      ])
+      setProperties([])
     } finally {
       setLoadingProperties(false)
     }
@@ -131,9 +123,19 @@ export default function InspectorManagement() {
           createdAt: new Date().toISOString(),
         }
 
-        console.log("Creating task:", taskData)
+        console.log("[v0] Creating task:", taskData)
 
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        const response = await fetch("http://localhost:4000/api/tasks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(taskData),
+        })
+
+        if (!response.ok) {
+          throw new Error("Failed to assign task")
+        }
 
         setSubmitStatus("success")
         setSubmitMessage("Task assigned successfully!")
@@ -153,6 +155,7 @@ export default function InspectorManagement() {
           setSubmitMessage("")
         }, 1500)
       } catch (error) {
+        console.error("[v0] Error assigning task:", error)
         setSubmitStatus("error")
         setSubmitMessage("Failed to assign task. Please try again.")
       } finally {

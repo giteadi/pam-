@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { fetchAvailableSupervisors, assignTaskToSupervisor } from "../redux/supervisorSlice"
-import { createInspection } from "../redux/inspectionSlice"
+import { scheduleInspection } from "../redux/inspectionSlice"
 import { fetchInspectors } from "../redux/inspectorSlice"
 
 function EnhancedInspectionScheduling({ onClose, onSuccess }) {
@@ -57,23 +57,33 @@ function EnhancedInspectionScheduling({ onClose, onSuccess }) {
 
     setIsSubmitting(true)
     setSubmitStatus(null)
-    setSubmitMessage("Submitting inspection...")
+    setSubmitMessage("Submitting inspection schedule...")
 
     try {
-      const inspectionData = {
-        ...formData,
+      const inspectionScheduleData = {
+        property_id: formData.property_id,
+        inspector_id: formData.inspector_id,
+        supervisor_id: formData.supervisor_id,
+        scheduled_date: formData.scheduled_date,
+        inspection_type: formData.inspection_type,
+        notes: formData.notes,
+        status: "scheduled",
         created_by: user?.id,
-        status: "pending",
+        created_at: new Date().toISOString(),
       }
 
-      setSubmitMessage("Creating inspection...")
-      await dispatch(createInspection(inspectionData)).unwrap()
+      setSubmitMessage("Creating inspection schedule...")
+      await dispatch(scheduleInspection(inspectionScheduleData)).unwrap()
 
       setSubmitMessage("Assigning to supervisor...")
       await dispatch(
         assignTaskToSupervisor({
           supervisorId: formData.supervisor_id,
-          taskData: inspectionData,
+          taskData: {
+            type: "inspection_schedule",
+            inspection_data: inspectionScheduleData,
+            assigned_date: new Date().toISOString(),
+          },
         }),
       ).unwrap()
 

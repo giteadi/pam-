@@ -49,6 +49,9 @@ export default function EnhancedInspectionsPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+
+    console.log("[v0] Form data before validation:", formData)
+
     const newErrors = {}
 
     if (!formData.propertyId) newErrors.propertyId = "Property is required"
@@ -59,16 +62,31 @@ export default function EnhancedInspectionsPage() {
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        const selectedProperty = properties.find((p) => p.id === formData.propertyId)
+        const selectedProperty = properties.find((p) => p.id === Number.parseInt(formData.propertyId))
         const selectedInspector = inspectors.find((i) => i.id === Number.parseInt(formData.inspectorId))
+
+        console.log("[v0] Selected property:", selectedProperty)
+        console.log("[v0] Selected inspector:", selectedInspector)
+
+        if (!selectedInspector) {
+          setErrors({ inspectorId: "Selected inspector not found. Please refresh and try again." })
+          return
+        }
+
         const inspectionData = {
-          ...formData,
+          property_id: Number.parseInt(formData.propertyId),
+          inspector_id: Number.parseInt(formData.inspectorId),
+          start_date: formData.scheduledDate,
+          notes: formData.notes || "",
+          // Frontend display fields
           propertyName: selectedProperty?.name || "Unknown Property",
           inspectorName: selectedInspector?.name || "Unknown Inspector",
-          assigned_inspector_id: formData.inspectorId,
+          type: formData.type,
           status: "scheduled",
           progress: 0,
         }
+
+        console.log("[v0] Final inspection data being sent:", inspectionData)
 
         if (editingInspection) {
           await dispatch(updateInspection({ id: editingInspection.id, data: inspectionData })).unwrap()
@@ -87,8 +105,20 @@ export default function EnhancedInspectionsPage() {
         })
         setErrors({})
       } catch (err) {
-        console.error("Failed to save inspection:", err)
+        console.error("[v0] Failed to save inspection:", err)
+
+        if (err.message && err.message.includes("foreign key constraint")) {
+          if (err.message.includes("inspector_id")) {
+            setErrors({ inspectorId: "Selected inspector not found in system. Please refresh and try again." })
+          } else {
+            setErrors({ general: "Invalid data reference. Please check your selections." })
+          }
+        } else {
+          console.error("[v0] Error details:", err.message)
+        }
       }
+    } else {
+      console.log("[v0] Validation errors:", newErrors)
     }
   }
 

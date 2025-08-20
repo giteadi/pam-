@@ -219,12 +219,37 @@ export const fetchInspectionsByProperty = createAsyncThunk(
   },
 )
 
+export const scheduleInspection = createAsyncThunk(
+  "inspections/schedule",
+  async (scheduleData, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/inspections/schedule`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(scheduleData),
+      })
+      const data = await handleApiResponse(response)
+
+      if (!data.success) {
+        return rejectWithValue(data.msg || "Failed to schedule inspection")
+      }
+
+      return data.data
+    } catch (error) {
+      return rejectWithValue(error.message)
+    }
+  },
+)
+
 const inspectionSlice = createSlice({
   name: "inspections",
   initialState: {
     inspections: [],
     selectedInspection: null,
     propertyInspections: [],
+    scheduledInspections: [],
     loading: false,
     error: null,
     totalCount: 0,
@@ -311,6 +336,20 @@ const inspectionSlice = createSlice({
         state.inspections = state.inspections.filter((i) => i.id !== action.payload)
       })
       .addCase(deleteInspection.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+      .addCase(scheduleInspection.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(scheduleInspection.fulfilled, (state, action) => {
+        state.loading = false
+        state.scheduledInspections.push(action.payload)
+        // Also add to regular inspections list for display
+        state.inspections.push(action.payload)
+      })
+      .addCase(scheduleInspection.rejected, (state, action) => {
         state.loading = false
         state.error = action.payload
       })

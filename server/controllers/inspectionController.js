@@ -6,12 +6,12 @@ exports.getAllInspections = (req, res) => {
     SELECT i.*, 
            p.name as property_name, 
            p.address as property_address,
-           u.name as inspector_name,
+           ins.name as inspector_name,
            COUNT(ii.id) as total_items,
            COUNT(CASE WHEN ii.is_completed = 1 THEN 1 END) as completed_items
     FROM inspections i
     LEFT JOIN properties p ON i.property_id = p.id
-    LEFT JOIN users u ON i.inspector_id = u.id
+    LEFT JOIN inspectors ins ON i.inspector_id = ins.id
     LEFT JOIN inspection_items ii ON i.id = ii.inspection_id
     GROUP BY i.id
     ORDER BY i.start_date DESC
@@ -42,10 +42,10 @@ exports.getInspectionById = (req, res) => {
     SELECT i.*, 
            p.name as property_name, 
            p.address as property_address,
-           u.name as inspector_name
+           ins.name as inspector_name
     FROM inspections i
     LEFT JOIN properties p ON i.property_id = p.id
-    LEFT JOIN users u ON i.inspector_id = u.id
+    LEFT JOIN inspectors ins ON i.inspector_id = ins.id
     WHERE i.id = ?
   `
 
@@ -223,9 +223,9 @@ exports.getInspectionsByProperty = (req, res) => {
   const propertyId = req.params.propertyId
 
   const sql = `
-    SELECT i.*, u.name as inspector_name
+    SELECT i.*, ins.name as inspector_name
     FROM inspections i
-    LEFT JOIN users u ON i.inspector_id = u.id
+    LEFT JOIN inspectors ins ON i.inspector_id = ins.id
     WHERE i.property_id = ?
     ORDER BY i.start_date DESC
   `
@@ -244,5 +244,79 @@ exports.getInspectionsByProperty = (req, res) => {
       data: results,
       count: results.length,
     })
+  })
+}
+
+// 7. SCHEDULE inspection
+exports.scheduleInspection = (req, res) => {
+  const { property_id, inspector_id, supervisor_id, scheduled_date, inspection_type, notes, created_by } = req.body
+
+  if (!property_id || !inspector_id || !scheduled_date) {
+    return res.status(400).json({
+      success: false,
+      msg: "Property ID, Inspector ID, and Scheduled Date are required",
+    })
+  }
+
+  // Verify inspector exists in inspectors table
+  const checkInspectorSql = "SELECT id, name FROM inspectors WHERE id = ? AND status = 'active'"
+
+  db.query(checkInspectorSql, [inspector_id], (checkErr, inspectorResults) => {
+    if (checkErr) {
+      console.error("Check Inspector Error:", checkErr)
+      return res.status(500).json({
+        success: false,
+        msg: "Failed to verify inspector",
+        error: checkErr.message,
+      })
+    }
+
+    if (inspectorResults.length === 0) {
+      return res.status(400).json({
+        success: false,
+        msg: `Inspector with ID ${inspector_id} not found. Please select a valid inspector.`,
+      })
+    }
+
+    // Create inspection schedule
+    const sql = `
+      INSERT INTO inspections (property_id, inspector_id, start_date, notes, status, inspection_type, created_by, supervisor_id)
+      VALUES (?, ?, ?, ?, 'scheduled', ?, ?, ?)
+    `
+
+    db.query(
+      sql,
+      [property_id, inspector_id, scheduled_date, notes, inspection_type, created_by, supervisor_id],
+      (err, result) => {
+        if (err) {
+          console.error("Schedule Inspection Error:", err)
+          return res.status(500).json({
+            success: false,
+            msg: "Failed to schedule inspection",
+            error: err.message,
+          })
+        }
+
+        const inspectionId = result.insertId
+        const inspectorName = inspectorResults[0].name
+
+        return res.status(201).json({
+          success: true,
+          msg: "Inspection scheduled successfully",
+          data: {
+            id: inspectionId,
+            property_id,
+            inspector_id,
+            inspector_name: inspectorName,
+            supervisor_id,
+            scheduled_date,
+            inspection_type,
+            notes,
+            status: "scheduled",
+            created_by,
+          },
+        })
+      },
+    )
   })
 }

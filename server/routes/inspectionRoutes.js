@@ -1,18 +1,15 @@
-const express = require("express");
-const router = express.Router();
+const express = require("express")
+const router = express.Router()
+const inspectionController = require("../controllers/inspectionController")
 
-const inspectionController = require("../controllers/inspectionController");
+// Existing routes
+router.get("/", inspectionController.getAllInspections)
+router.get("/:id", inspectionController.getInspectionById)
+router.post("/", inspectionController.createInspection)
+router.put("/:id", inspectionController.updateInspection)
+router.patch("/:itemId", inspectionController.updateChecklistItem)
+router.get("/property/:propertyId", inspectionController.getInspectionsByProperty)
 
-router.get("/", inspectionController.getAllInspections);
-router.get("/:id", inspectionController.getInspectionById);
-router.post("/", inspectionController.createInspection);
-router.put("/:id", inspectionController.updateInspection);
+router.post("/schedule", inspectionController.scheduleInspection)
 
-// Update a single checklist item's completion status
-// Body: { is_completed: 0 | 1 }
-router.patch("/items/:itemId", inspectionController.updateChecklistItem);
-
-// Inspections for a given property
-router.get("/property/:propertyId", inspectionController.getInspectionsByProperty);
-
-module.exports = router;
+module.exports = router
