@@ -122,15 +122,19 @@ export const assignInspectionTask = createAsyncThunk(
   "inspectors/assignTask",
   async ({ inspectionId, inspectorId }, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${BASE_URL}/api/inspection/${inspectionId}/assign`, {
+      const response = await fetch(`${BASE_URL}/api/inspection/${inspectionId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inspector_id: inspectorId }),
+        body: JSON.stringify({
+          inspector_id: inspectorId,
+          status: "assigned",
+        }),
       })
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return await handleApiResponse(response)
+      const result = await handleApiResponse(response)
+      return result.success ? { inspectionId, inspectorId } : result
     } catch (error) {
       console.error("Failed to assign inspection task:", error)
       return rejectWithValue(error.message)
@@ -238,7 +242,7 @@ const inspectorSlice = createSlice({
       })
       .addCase(assignInspectionTask.fulfilled, (state, action) => {
         state.assignmentLoading = false
-        const inspector = state.inspectors.find((i) => i.id === action.payload.inspector_id)
+        const inspector = state.inspectors.find((i) => i.id === action.payload.inspectorId)
         if (inspector) {
           inspector.availability = "busy"
         }

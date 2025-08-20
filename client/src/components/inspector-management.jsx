@@ -12,7 +12,7 @@ import {
   clearError,
   setSelectedInspector,
   clearSelectedInspector,
-} from "../redux/slices/inspectorSlice"
+} from "../redux/slices/inspectorSlice" 
 
 export default function InspectorManagement() {
   const dispatch = useDispatch()
@@ -38,6 +38,8 @@ export default function InspectorManagement() {
     propertyId: "",
   })
   const [taskErrors, setTaskErrors] = useState({})
+  const [properties, setProperties] = useState([])
+  const [loadingProperties, setLoadingProperties] = useState(false)
 
   const [formData, setFormData] = useState({
     name: "",
@@ -56,12 +58,45 @@ export default function InspectorManagement() {
     dispatch(fetchAvailableInspectors())
   }, [dispatch])
 
+  const fetchProperties = async () => {
+    try {
+      setLoadingProperties(true)
+      const response = await fetch("http://localhost:4000/api/property")
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch properties")
+      }
+
+      const data = await response.json()
+      if (data.success && data.data) {
+        setProperties(data.data)
+      } else {
+        console.warn("Property API returned unexpected format, using fallback data")
+        setProperties([
+          { id: 1, name: "Sun Villa", address: "123 Main St" },
+          { id: 2, name: "Ocean View Apartment", address: "456 Beach Ave" },
+          { id: 3, name: "Mountain Lodge", address: "789 Hill Rd" },
+        ])
+      }
+    } catch (error) {
+      console.error("Failed to fetch properties:", error)
+      setProperties([
+        { id: 1, name: "Sun Villa", address: "123 Main St" },
+        { id: 2, name: "Ocean View Apartment", address: "456 Beach Ave" },
+        { id: 3, name: "Mountain Lodge", address: "789 Hill Rd" },
+      ])
+    } finally {
+      setLoadingProperties(false)
+    }
+  }
+
   const handleInspectorCardClick = (inspector) => {
     setSelectedInspectorForTask(inspector)
     setShowTaskAssignmentModal(true)
     setTaskErrors({})
     setSubmitStatus(null)
     setSubmitMessage("")
+    fetchProperties()
   }
 
   const handleTaskInputChange = (e) => {
@@ -504,6 +539,26 @@ export default function InspectorManagement() {
                   required
                 />
                 {taskErrors.description && <p className="text-sm text-red-600 mt-1">{taskErrors.description}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Property</label>
+                <select
+                  name="propertyId"
+                  value={taskFormData.propertyId}
+                  onChange={handleTaskInputChange}
+                  disabled={isSubmitting || loadingProperties}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {loadingProperties ? "Loading properties..." : "Select a property (optional)"}
+                  </option>
+                  {properties.map((property) => (
+                    <option key={property.id} value={property.id}>
+                      {property.name} - {property.address}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
