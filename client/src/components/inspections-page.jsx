@@ -144,17 +144,51 @@ export default function EnhancedInspectionsPage() {
   }
 
   const handleEdit = (inspection) => {
-    console.log("[Page] Editing inspection:", inspection)
-    setEditingInspection(inspection)
-    setFormData({
-      propertyId: inspection.propertyId?.toString() || "",
-      inspectorId: inspection.inspectorId?.toString() || inspection.assigned_inspector_id?.toString() || "",
-      scheduledDate: inspection.scheduledDate || inspection.startDate || "",
-      type: inspection.type || "routine",
-      notes: inspection.notes || "",
-    })
-    setShowForm(true)
+  console.log("[Page] Editing inspection:", inspection)
+  setEditingInspection(inspection)
+  
+  // Helper function to format date for datetime-local input
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return ""
+    
+    try {
+      // Clean up the date string - remove any NULL values or extra characters
+      const cleanDate = dateString.replace(/\*NULL\*/g, '').trim()
+      
+      // Parse the date
+      const date = new Date(cleanDate)
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        console.warn("Invalid date:", dateString)
+        return ""
+      }
+      
+      // Format to YYYY-MM-DDTHH:MM format required by datetime-local
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`
+    } catch (error) {
+      console.error("Error formatting date:", error, dateString)
+      return ""
+    }
   }
+
+  const scheduledDate = formatDateForInput(inspection.scheduledDate || inspection.startDate || inspection.start_date)
+  
+  setFormData({
+    propertyId: inspection.propertyId?.toString() || "",
+    inspectorId: inspection.inspectorId?.toString() || inspection.assigned_inspector_id?.toString() || "",
+    scheduledDate: scheduledDate,
+    type: inspection.type || "routine",
+    notes: inspection.notes || "",
+  })
+  setShowForm(true)
+}
 
   const handleView = (inspection) => {
     setViewingInspection(inspection)
