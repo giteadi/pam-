@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { Link, useNavigate } from "react-router-dom"
-import { logoutUser } from "../redux/slices/userSlice"
+import { logoutUser, setCurrentUser } from "../redux/slices/userSlice"
 import { fetchDashboardStats, fetchRecentActivities, fetchUpcomingInspections } from "../redux/slices/dashboardSlice"
 import InspectionsPage from "./inspections-page"
 import PropertiesPage from "./properties-page"
@@ -110,9 +110,24 @@ export default function Dashboard() {
     return permissions[permission] || false
   }
 
-  const handleLogout = () => {
-    dispatch(logoutUser())
-    navigate("/")
+  const handleLogout = async () => {
+    try {
+      // Clear Redux state and localStorage
+      await dispatch(logoutUser()).unwrap()
+      
+      // Reset user state explicitly
+      dispatch(setCurrentUser(null))
+      
+      // Navigate to login page
+      navigate("/login", { replace: true })
+    } catch (error) {
+      console.error("Logout error:", error)
+      
+      // Even if there's an error, still clear local state and navigate
+      dispatch(setCurrentUser(null))
+      localStorage.removeItem("user")
+      navigate("/login", { replace: true })
+    }
   }
 
   const handleTabClick = (tabId, e) => {
@@ -169,9 +184,17 @@ export default function Dashboard() {
               </div>
               <button
                 onClick={handleLogout}
-                className="text-slate-600 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+                className="flex items-center space-x-2 text-slate-600 hover:text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 border border-slate-200 hover:border-red-200"
               >
-                Logout
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
+                <span>Logout</span>
               </button>
             </div>
           </div>

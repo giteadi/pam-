@@ -169,11 +169,17 @@ export const registerUser = createAsyncThunk("users/register", async (userData, 
 
 export const logoutUser = createAsyncThunk("users/logout", async (_, { rejectWithValue }) => {
   try {
-    // Remove user data from localStorage
+    // Clear localStorage first
     localStorage.removeItem("user")
+    
+    // You could also make an API call to invalidate server-side session if needed
+    // const response = await fetch(`${BASE_URL}/api/users/logout`, { method: "POST" })
+    
     return null
   } catch (error) {
-    return rejectWithValue(error.message)
+    // Even if there's an error, still clear localStorage
+    localStorage.removeItem("user")
+    return null
   }
 })
 
@@ -201,6 +207,13 @@ const userSlice = createSlice({
     setCurrentUser: (state, action) => {
       state.user = action.payload
       state.isAuthenticated = !!action.payload
+      
+      // Update localStorage
+      if (action.payload) {
+        localStorage.setItem("user", JSON.stringify(action.payload))
+      } else {
+        localStorage.removeItem("user")
+      }
     },
   },
   extraReducers: (builder) => {
@@ -234,6 +247,29 @@ const userSlice = createSlice({
         state.loading = false
         state.error = action.payload
         state.isAuthenticated = false
+      })
+
+      // Logout user
+      .addCase(logoutUser.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.loading = false
+        state.user = null
+        state.isAuthenticated = false
+        state.selectedUser = null
+        state.error = null
+        state.users = []
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        // Even if logout fails, clear the user state
+        state.loading = false
+        state.user = null
+        state.isAuthenticated = false
+        state.selectedUser = null
+        state.error = null
+        state.users = []
       })
   },
 })
