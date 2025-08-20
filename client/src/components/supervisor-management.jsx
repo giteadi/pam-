@@ -14,6 +14,7 @@ import {
 const SupervisorManagement = () => {
   const dispatch = useDispatch()
   const { supervisors, loading, error, selectedSupervisor } = useSelector((state) => state.supervisors)
+  const { user } = useSelector((state) => state.users)
 
   const [showModal, setShowModal] = useState(false)
   const [editMode, setEditMode] = useState(false)
@@ -118,6 +119,17 @@ const SupervisorManagement = () => {
     resetForm()
   }
 
+  const hasPermission = (action) => {
+    const userRole = user?.role
+    const permissions = {
+      canViewSupervisors: userRole === "admin" || userRole === "supervisor",
+      canCreateSupervisor: userRole === "admin", // Only admin can create supervisors
+      canEditSupervisor: userRole === "admin", // Only admin can edit supervisors
+      canDeleteSupervisor: userRole === "admin", // Only admin can delete supervisors
+    }
+    return permissions[action] || false
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -129,14 +141,18 @@ const SupervisorManagement = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Supervisor Management</h1>
-        <button
-          onClick={openAddModal}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-        >
-          <span>+</span>
-          Add Supervisor
-        </button>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {user?.role === "admin" ? "Supervisor Management" : "Supervisors"}
+        </h1>
+        {hasPermission("canCreateSupervisor") && (
+          <button
+            onClick={openAddModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+          >
+            <span>+</span>
+            Add Supervisor
+          </button>
+        )}
       </div>
 
       {error && (
@@ -169,9 +185,11 @@ const SupervisorManagement = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Workload
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              {hasPermission("canEditSupervisor") && (
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -219,14 +237,18 @@ const SupervisorManagement = () => {
                   <div>Active: {supervisor.active_inspections || 0}</div>
                   <div>Pending: {supervisor.pending_inspections || 0}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button onClick={() => handleEdit(supervisor)} className="text-blue-600 hover:text-blue-900 mr-3">
-                    Edit
-                  </button>
-                  <button onClick={() => handleDelete(supervisor.id)} className="text-red-600 hover:text-red-900">
-                    Delete
-                  </button>
-                </td>
+                {hasPermission("canEditSupervisor") && (
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onClick={() => handleEdit(supervisor)} className="text-blue-600 hover:text-blue-900 mr-3">
+                      Edit
+                    </button>
+                    {hasPermission("canDeleteSupervisor") && (
+                      <button onClick={() => handleDelete(supervisor.id)} className="text-red-600 hover:text-red-900">
+                        Delete
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -240,7 +262,7 @@ const SupervisorManagement = () => {
       </div>
 
       {/* Add/Edit Modal */}
-      {showModal && (
+      {showModal && hasPermission("canCreateSupervisor") && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
             <div className="mt-3">

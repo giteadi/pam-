@@ -4,7 +4,7 @@ import { useSelector } from "react-redux"
 import { useNavigate } from "react-router-dom"
 import { useEffect } from "react"
 
-export default function AuthGuard({ children, requiredRole = null }) {
+export default function AuthGuard({ children, requiredRole = null, allowedRoles = null }) {
   const { user, isAuthenticated, loading } = useSelector((state) => state.users)
   const navigate = useNavigate()
 
@@ -18,13 +18,16 @@ export default function AuthGuard({ children, requiredRole = null }) {
       return
     }
 
-    // Check role-based access
     if (requiredRole && user?.role !== requiredRole) {
-      // You can create an unauthorized page or redirect to dashboard
       navigate("/dashboard", { replace: true })
       return
     }
-  }, [isAuthenticated, user, loading, requiredRole, navigate])
+
+    if (allowedRoles && !allowedRoles.includes(user?.role)) {
+      navigate("/dashboard", { replace: true })
+      return
+    }
+  }, [isAuthenticated, user, loading, requiredRole, allowedRoles, navigate])
 
   // Show loading spinner while checking authentication
   if (loading) {
@@ -39,7 +42,12 @@ export default function AuthGuard({ children, requiredRole = null }) {
   }
 
   // Don't render anything if not authenticated or wrong role
-  if (!isAuthenticated || !user || (requiredRole && user?.role !== requiredRole)) {
+  if (
+    !isAuthenticated ||
+    !user ||
+    (requiredRole && user?.role !== requiredRole) ||
+    (allowedRoles && !allowedRoles.includes(user?.role))
+  ) {
     return null
   }
 

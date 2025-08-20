@@ -12,7 +12,6 @@ import PropertiesPage from "./components/properties-page"
 import UserManagement from "./components/user-management"
 import ProgressMonitoring from "./components/progress-monitoring"
 
-
 export default function App() {
   return (
     <AuthProvider>
@@ -26,7 +25,6 @@ export default function App() {
                 path="/dashboard"
                 element={
                   <AuthGuard>
-                    
                     <Dashboard />
                   </AuthGuard>
                 }
@@ -36,7 +34,6 @@ export default function App() {
                 path="/task-assignment"
                 element={
                   <AuthGuard>
-                
                     <TaskAssignment />
                   </AuthGuard>
                 }
@@ -46,7 +43,6 @@ export default function App() {
                 path="/inspections"
                 element={
                   <AuthGuard>
-                
                     <InspectionsPage />
                   </AuthGuard>
                 }
@@ -56,7 +52,6 @@ export default function App() {
                 path="/properties"
                 element={
                   <AuthGuard>
-                
                     <PropertiesPage />
                   </AuthGuard>
                 }
@@ -65,8 +60,7 @@ export default function App() {
               <Route
                 path="/users"
                 element={
-                  <AuthGuard>
-                
+                  <AuthGuard requiredRoles={["admin"]}>
                     <UserManagement />
                   </AuthGuard>
                 }
@@ -76,7 +70,6 @@ export default function App() {
                 path="/progress"
                 element={
                   <AuthGuard>
-                
                     <ProgressMonitoring />
                   </AuthGuard>
                 }
@@ -86,7 +79,6 @@ export default function App() {
                 path="/"
                 element={
                   <AuthGuard>
-                
                     <Dashboard />
                   </AuthGuard>
                 }

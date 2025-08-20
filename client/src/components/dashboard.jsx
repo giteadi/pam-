@@ -104,8 +104,10 @@ export default function Dashboard() {
     const permissions = {
       canViewInspections: true,
       canViewProperties: true,
-      canManageUsers: userRole === "admin" || userRole === "supervisor",
-      canManageInspectors: userRole === "admin" || userRole === "supervisor",
+      canManageUsers: userRole === "admin",
+      canManageInspectors: userRole === "admin",
+      canAssignTasks: userRole === "admin" || userRole === "supervisor",
+      canPerformInspections: userRole === "admin" || userRole === "supervisor",
     }
     return permissions[permission] || false
   }
@@ -114,15 +116,15 @@ export default function Dashboard() {
     try {
       // Clear Redux state and localStorage
       await dispatch(logoutUser()).unwrap()
-      
+
       // Reset user state explicitly
       dispatch(setCurrentUser(null))
-      
+
       // Navigate to login page
       navigate("/login", { replace: true })
     } catch (error) {
       console.error("Logout error:", error)
-      
+
       // Even if there's an error, still clear local state and navigate
       dispatch(setCurrentUser(null))
       localStorage.removeItem("user")

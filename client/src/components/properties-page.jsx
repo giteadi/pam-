@@ -26,17 +26,25 @@ export default function PropertiesPage() {
     const userRole = user?.role
     const permissions = {
       canViewAllProperties: userRole === "admin" || userRole === "supervisor",
-      canCreateProperty: userRole === "admin" || userRole === "supervisor",
-      canEditProperty: userRole === "admin" || userRole === "supervisor",
+      canCreateProperty: userRole === "admin",
+      canEditProperty: userRole === "admin",
       canDeleteProperty: userRole === "admin",
+      canAssignTasks: userRole === "admin" || userRole === "supervisor",
+      canPerformInspections: userRole === "admin" || userRole === "supervisor",
     }
     return permissions[permission] || false
   }
 
   const filteredProperties = properties.filter((property) => {
-    // Role-based filtering
-    if (!hasPermission("canViewAllProperties")) {
-      // Clients only see properties they own or are assigned to
+    if (user?.role === "supervisor") {
+      const userFullName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : ""
+      const isAssignedToSupervisor =
+        property.assigned_supervisor === user?.id ||
+        property.assigned_supervisor === user?.email ||
+        (userFullName && property.assigned_supervisor?.toLowerCase().includes(userFullName.toLowerCase()))
+
+      if (!isAssignedToSupervisor) return false
+    } else if (user?.role === "client") {
       const userFullName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : ""
       const hasAccess =
         property.contact === user?.email ||
@@ -44,7 +52,6 @@ export default function PropertiesPage() {
       if (!hasAccess) return false
     }
 
-    // Search filtering
     const matchesSearch =
       property.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.address.toLowerCase().includes(searchTerm.toLowerCase())
@@ -116,9 +123,11 @@ export default function PropertiesPage() {
                 Properties
               </h1>
               <p className="text-slate-600 mt-2">
-                {hasPermission("canViewAllProperties")
+                {user?.role === "admin"
                   ? "Manage your property portfolio"
-                  : "View your assigned properties"}
+                  : user?.role === "supervisor"
+                    ? "View and inspect assigned properties"
+                    : "View your assigned properties"}
               </p>
             </div>
             {hasPermission("canCreateProperty") && (
@@ -213,7 +222,11 @@ export default function PropertiesPage() {
             <p className="text-muted-foreground">
               {searchTerm || filterType !== "all" || filterStatus !== "all"
                 ? "Try adjusting your search or filters"
-                : "Get started by adding your first property"}
+                : user?.role === "supervisor"
+                  ? "No properties have been assigned to you yet"
+                  : user?.role === "admin"
+                    ? "Get started by adding your first property"
+                    : "No properties assigned to you"}
             </p>
           </div>
         ) : (
@@ -226,6 +239,8 @@ export default function PropertiesPage() {
                 onEdit={handleEditProperty}
                 onView={handleViewProperty}
                 onDelete={handleDeleteProperty}
+                canAssignTasks={hasPermission("canAssignTasks")}
+                canPerformInspections={hasPermission("canPerformInspections")}
               />
             ))}
           </div>
