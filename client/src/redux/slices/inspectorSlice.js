@@ -23,26 +23,27 @@ export const fetchInspectors = createAsyncThunk("inspectors/fetchAll", async (_,
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    return await handleApiResponse(response)
+    const result = await handleApiResponse(response)
+    return result.success ? result.data : []
   } catch (error) {
     console.error("Failed to fetch inspectors:", error)
-    // Return mock data as fallback
     return rejectWithValue(error.message)
   }
 })
 
 export const fetchAvailableInspectors = createAsyncThunk(
   "inspectors/fetchAvailable",
-  async (_, { rejectWithValue }) => {
+  async (date = null, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${BASE_URL}/api/inspector/available`)
+      const url = date ? `${BASE_URL}/api/inspector/available?date=${date}` : `${BASE_URL}/api/inspector/available`
+      const response = await fetch(url)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return await handleApiResponse(response)
+      const result = await handleApiResponse(response)
+      return result.success ? result.data : []
     } catch (error) {
       console.error("Failed to fetch available inspectors:", error)
-      // Return mock available inspectors as fallback
       const mockInspectors = [
         {
           id: 1,
@@ -55,6 +56,7 @@ export const fetchAvailableInspectors = createAsyncThunk(
           hourly_rate: 75,
           availability: "available",
           status: "active",
+          scheduled_inspections: 0,
         },
       ]
       return mockInspectors
@@ -72,7 +74,8 @@ export const createInspector = createAsyncThunk("inspectors/create", async (insp
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    return await handleApiResponse(response)
+    const result = await handleApiResponse(response)
+    return result.success ? result.data : result
   } catch (error) {
     console.error("Failed to create inspector:", error)
     return rejectWithValue(error.message)
@@ -91,7 +94,8 @@ export const updateInspector = createAsyncThunk(
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
-      return await handleApiResponse(response)
+      const result = await handleApiResponse(response)
+      return { id, ...inspectorData }
     } catch (error) {
       console.error("Failed to update inspector:", error)
       return rejectWithValue(error.message)
@@ -182,6 +186,8 @@ const inspectorSlice = createSlice({
             hourly_rate: 75,
             availability: "available",
             status: "active",
+            total_inspections: 15,
+            completed_inspections: 12,
           },
           {
             id: 2,
@@ -194,6 +200,8 @@ const inspectorSlice = createSlice({
             hourly_rate: 95,
             availability: "busy",
             status: "active",
+            total_inspections: 28,
+            completed_inspections: 25,
           },
         ]
       })
@@ -230,7 +238,6 @@ const inspectorSlice = createSlice({
       })
       .addCase(assignInspectionTask.fulfilled, (state, action) => {
         state.assignmentLoading = false
-        // Update inspector availability after assignment
         const inspector = state.inspectors.find((i) => i.id === action.payload.inspector_id)
         if (inspector) {
           inspector.availability = "busy"

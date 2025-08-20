@@ -275,6 +275,45 @@ const inspectionSlice = createSlice({
         state.loading = false
         state.error = action.payload
       })
+      .addCase(createInspection.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(createInspection.fulfilled, (state, action) => {
+        state.loading = false
+        state.inspections.push(action.payload)
+      })
+      .addCase(createInspection.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+      .addCase(updateInspection.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(updateInspection.fulfilled, (state, action) => {
+        state.loading = false
+        const index = state.inspections.findIndex((i) => i.id === action.payload.inspectionId)
+        if (index !== -1) {
+          state.inspections[index] = { ...state.inspections[index], ...action.payload.inspectionData }
+        }
+      })
+      .addCase(updateInspection.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
+      .addCase(deleteInspection.pending, (state) => {
+        state.loading = true
+        state.error = null
+      })
+      .addCase(deleteInspection.fulfilled, (state, action) => {
+        state.loading = false
+        state.inspections = state.inspections.filter((i) => i.id !== action.payload)
+      })
+      .addCase(deleteInspection.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload
+      })
   },
 })
 
