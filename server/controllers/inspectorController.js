@@ -3,14 +3,49 @@ const { db } = require("../config/db")
 // 1. GET all inspectors
 exports.getAllInspectors = (req, res) => {
   const sql = `
-    SELECT i.*,
-           COUNT(ins.id) as total_inspections,
-           COUNT(CASE WHEN ins.status = 'completed' THEN 1 END) as completed_inspections
+    SELECT 
+      i.id,
+      i.name,
+      i.email,
+      i.phone,
+      i.specialization,
+      i.certification,
+      i.experience_years,
+      i.hourly_rate,
+      i.availability,
+      i.status,
+      COUNT(ins.id) as total_inspections,
+      COUNT(CASE WHEN ins.status = 'completed' THEN 1 END) as completed_inspections,
+      'inspector' as source_table
     FROM inspectors i
     LEFT JOIN inspections ins ON i.id = ins.assigned_inspector_id
     WHERE i.status = 'active'
     GROUP BY i.id
-    ORDER BY i.name ASC
+    
+    UNION ALL
+    
+    SELECT 
+      u.id,
+      u.name,
+      u.email,
+      NULL as phone,
+      s.specialization,
+      s.certification,
+      s.experience_years,
+      s.hourly_rate,
+      s.availability_status as availability,
+      u.status,
+      COUNT(ins2.id) as total_inspections,
+      COUNT(CASE WHEN ins2.status = 'completed' THEN 1 END) as completed_inspections,
+      'user' as source_table
+    FROM users u
+    LEFT JOIN supervisors s ON u.id = s.user_id
+    LEFT JOIN inspections ins2 ON u.id = ins2.inspector_id
+    WHERE u.status = 'active' 
+      AND u.role != 'admin' 
+      AND u.role != 'client'
+    GROUP BY u.id
+    ORDER BY name ASC
   `
 
   db.query(sql, (err, results) => {
@@ -35,8 +70,19 @@ exports.getAvailableInspectors = (req, res) => {
   const { date } = req.query
 
   let sql = `
-    SELECT i.*,
-           COUNT(ins.id) as scheduled_inspections
+    SELECT 
+      i.id,
+      i.name,
+      i.email,
+      i.phone,
+      i.specialization,
+      i.certification,
+      i.experience_years,
+      i.hourly_rate,
+      i.availability,
+      i.status,
+      COUNT(ins.id) as scheduled_inspections,
+      'inspector' as source_table
     FROM inspectors i
     LEFT JOIN inspections ins ON i.id = ins.assigned_inspector_id 
     WHERE i.status = 'active' AND i.availability = 'available'
@@ -52,7 +98,40 @@ exports.getAvailableInspectors = (req, res) => {
   sql += `
     GROUP BY i.id
     HAVING scheduled_inspections < 3
-    ORDER BY scheduled_inspections ASC, i.name ASC
+    
+    UNION ALL
+    
+    SELECT 
+      u.id,
+      u.name,
+      u.email,
+      NULL as phone,
+      s.specialization,
+      s.certification,
+      s.experience_years,
+      s.hourly_rate,
+      s.availability_status as availability,
+      u.status,
+      COUNT(ins2.id) as scheduled_inspections,
+      'user' as source_table
+    FROM users u
+    LEFT JOIN supervisors s ON u.id = s.user_id
+    LEFT JOIN inspections ins2 ON u.id = ins2.inspector_id
+    WHERE u.status = 'active' 
+      AND u.role != 'admin' 
+      AND u.role != 'client'
+      AND (s.availability_status = 'available' OR s.availability_status IS NULL)
+  `
+
+  if (date) {
+    sql += ` AND (ins2.start_date != ? OR ins2.start_date IS NULL)`
+    params.push(date)
+  }
+
+  sql += `
+    GROUP BY u.id
+    HAVING scheduled_inspections < 3
+    ORDER BY scheduled_inspections ASC, name ASC
   `
 
   db.query(sql, params, (err, results) => {

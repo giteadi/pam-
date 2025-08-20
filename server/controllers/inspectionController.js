@@ -258,10 +258,17 @@ exports.scheduleInspection = (req, res) => {
     })
   }
 
-  // Verify inspector exists in inspectors table
-  const checkInspectorSql = "SELECT id, name FROM inspectors WHERE id = ? AND status = 'active'"
+  const checkInspectorSql = `
+    SELECT id, name, 'inspector' as source_table FROM inspectors 
+    WHERE id = ? AND status = 'active'
+    
+    UNION ALL
+    
+    SELECT id, name, 'user' as source_table FROM users 
+    WHERE id = ? AND role = 'supervisor' AND status = 'active'
+  `
 
-  db.query(checkInspectorSql, [inspector_id], (checkErr, inspectorResults) => {
+  db.query(checkInspectorSql, [inspector_id, inspector_id], (checkErr, inspectorResults) => {
     if (checkErr) {
       console.error("Check Inspector Error:", checkErr)
       return res.status(500).json({

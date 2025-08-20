@@ -256,3 +256,4 @@ const inspectorSlice = createSlice({
 
 export const { setSelectedInspector, clearSelectedInspector, clearError } = inspectorSlice.actions
 export default inspectorSlice.reducer
+
