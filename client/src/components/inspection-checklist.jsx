@@ -506,6 +506,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
           {/* General Notes */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
             <h3 className="text-xl font-bold text-slate-800 mb-4">General Notes</h3>
+            <div className="mb-2 text-sm text-slate-600">Add notes line by line for better visibility</div>
             <textarea
               value={notes}
               onChange={(e) => {
@@ -517,6 +518,18 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
               rows={5}
               disabled={loading}
             />
+            {notes && (
+              <div className="mt-4">
+                <h4 className="font-semibold text-slate-700 mb-2">Notes Preview</h4>
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                  {notes.split('\n').map((note, index) => (
+                    <p key={index} className="text-slate-900 py-1 border-b border-slate-100 last:border-0">
+                      {note || ' '}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

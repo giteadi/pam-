@@ -12,17 +12,31 @@ import NotificationPanel from "./notification-panel"
 import InspectorManagement from "./inspector-management"
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState("inspections")
   const dispatch = useDispatch()
   const { user } = useSelector((state) => state.users)
   const navigate = useNavigate()
   const [availableTabs, setAvailableTabs] = useState([])
-  const ActiveComponent = availableTabs.find((tab) => tab.id === activeTab)?.component || InspectionsPage
+  
+  // Set default tab based on user role
+  const defaultTab = user?.role === "supervisor" ? "properties" : "inspections"
+  const [activeTab, setActiveTab] = useState(defaultTab)
+  
+  // Set default component based on available tabs or user role
+  const getDefaultComponent = () => {
+    if (user?.role === "supervisor") return PropertiesPage
+    return availableTabs.find((tab) => tab.id === activeTab)?.component || PropertiesPage
+  }
+  
+  const ActiveComponent = getDefaultComponent()
 
   useEffect(() => {
     dispatch(fetchDashboardStats())
     dispatch(fetchRecentActivities())
-    dispatch(fetchUpcomingInspections())
+    
+    // Only fetch upcoming inspections if user is not a supervisor
+    if (user?.role !== "supervisor") {
+      dispatch(fetchUpcomingInspections())
+    }
 
     const tabs = [
       {
@@ -102,7 +116,7 @@ export default function Dashboard() {
   const hasPermission = (permission) => {
     const userRole = user?.role
     const permissions = {
-      canViewInspections: true,
+      canViewInspections: userRole === "admin" || userRole === "inspector" || userRole === "client",
       canViewProperties: true,
       canManageUsers: userRole === "admin",
       canManageInspectors: userRole === "admin",

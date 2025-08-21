@@ -165,6 +165,7 @@ export default function PropertyInspectionForm({ property, inspections, onClose 
           
           <div className="mb-6">
             <label className="block text-sm font-medium text-slate-700 mb-2">Inspection Notes</label>
+            <div className="mb-2 text-sm text-slate-600">Add notes line by line for better visibility</div>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -172,6 +173,18 @@ export default function PropertyInspectionForm({ property, inspections, onClose 
               rows="3"
               placeholder="Add general notes about this property inspection"
             ></textarea>
+            {notes && (
+              <div className="mt-4">
+                <h4 className="font-semibold text-slate-700 mb-2">Notes Preview</h4>
+                <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                  {notes.split('\n').map((note, index) => (
+                    <p key={index} className="text-slate-900 py-1 border-b border-slate-100 last:border-0">
+                      {note || ' '}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           
           <div className="mb-6">

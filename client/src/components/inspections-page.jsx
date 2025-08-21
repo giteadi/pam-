@@ -685,7 +685,13 @@ export default function EnhancedInspectionsPage() {
                   {viewingInspection.notes && (
                     <div>
                       <label className="text-sm font-semibold text-slate-700">Notes</label>
-                      <p className="text-slate-900 mt-1">{viewingInspection.notes}</p>
+                      <div className="bg-slate-50 rounded-lg p-3 mt-2 border border-slate-200">
+                        {viewingInspection.notes.split('\n').map((note, index) => (
+                          <p key={index} className="text-slate-900 py-1 border-b border-slate-100 last:border-0">
+                            {note}
+                          </p>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

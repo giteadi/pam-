@@ -321,6 +321,7 @@ export default function SupervisorInspectionForm({ property, onSubmit, onCancel 
               </svg>
               Inspection Review *
             </h3>
+            <div className="mb-2 text-sm text-gray-600">Add review notes line by line for better visibility</div>
             <textarea
               value={inspectionData.review}
               onChange={(e) => setInspectionData((prev) => ({ ...prev, review: e.target.value }))}
@@ -329,6 +330,18 @@ export default function SupervisorInspectionForm({ property, onSubmit, onCancel 
               rows={4}
               required
             />
+            {inspectionData.review && (
+              <div className="mt-4">
+                <h4 className="font-semibold text-gray-700 mb-2">Review Preview</h4>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  {inspectionData.review.split('\n').map((note, index) => (
+                    <p key={index} className="text-gray-900 py-1 border-b border-gray-100 last:border-0">
+                      {note || ' '}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Recommendations */}
@@ -344,6 +357,7 @@ export default function SupervisorInspectionForm({ property, onSubmit, onCancel 
               </svg>
               Recommendations (Optional)
             </h3>
+            <div className="mb-2 text-sm text-gray-600">Add recommendations line by line for better visibility</div>
             <textarea
               value={inspectionData.recommendations}
               onChange={(e) => setInspectionData((prev) => ({ ...prev, recommendations: e.target.value }))}
@@ -351,6 +365,18 @@ export default function SupervisorInspectionForm({ property, onSubmit, onCancel 
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
               rows={3}
             />
+            {inspectionData.recommendations && (
+              <div className="mt-4">
+                <h4 className="font-semibold text-gray-700 mb-2">Recommendations Preview</h4>
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  {inspectionData.recommendations.split('\n').map((note, index) => (
+                    <p key={index} className="text-gray-900 py-1 border-b border-gray-100 last:border-0">
+                      {note || ' '}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Additional Options */}
