@@ -28,6 +28,7 @@ const transformInspectionData = (apiData) => {
     inspector_id: apiData.inspector_id, // Include both formats for compatibility
     assigned_inspector_id: apiData.assigned_inspector_id, // Keep original value without overwriting
     supervisor_id: apiData.supervisor_id, // Include supervisor_id
+    owner: apiData.owner, // Include owner information
     inspectorName: apiData.inspector_name || "Unknown Inspector",
     startDate: apiData.start_date,
     scheduledDate: apiData.start_date, // For compatibility with frontend

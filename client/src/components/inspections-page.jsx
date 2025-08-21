@@ -50,9 +50,14 @@ export default function EnhancedInspectionsPage() {
   const filteredInspections = inspections.filter((inspection) => {
     const matchesSearch =
       inspection.propertyName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      inspection.inspectorName?.toLowerCase().includes(searchTerm.toLowerCase())
+      (inspection.inspector_name || inspection.inspectorName)?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === "all" || inspection.status === filterStatus
-    return matchesSearch && matchesStatus
+    
+    // Filter inspections by client ID if the user is a client
+    const isClientProperty = user?.role === "client" ? 
+      String(inspection.owner) === String(user.id) : true
+    
+    return matchesSearch && matchesStatus && isClientProperty
   })
 
   const handleSubmit = async (e) => {
@@ -323,7 +328,7 @@ export default function EnhancedInspectionsPage() {
                         <div className="font-semibold text-slate-900">{inspection.propertyName || 'N/A'}</div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="text-slate-700">{inspection.inspectorName || 'N/A'}</div>
+                        <div className="text-slate-700">{inspection.inspector_name || inspection.inspectorName || 'N/A'}</div>
                       </td>
                       <td className="py-4 px-6">
                         <div className="text-slate-700">
@@ -650,7 +655,9 @@ export default function EnhancedInspectionsPage() {
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Inspector</label>
-                    <p className="text-slate-900 mt-1">{viewingInspection.inspectorName || 'N/A'}</p>
+                    <p className="text-slate-900 mt-1">
+                      {viewingInspection.inspector_name || viewingInspection.inspectorName || 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Scheduled Date</label>

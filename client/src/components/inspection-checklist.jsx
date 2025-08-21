@@ -223,7 +223,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
             <div>
               <h1 className="text-2xl font-bold text-slate-800">{inspection.propertyName}</h1>
               <p className="text-sm text-slate-600 mt-1">
-                Inspector: <span className="font-medium">{inspection.inspectorName}</span> • Started:{" "}
+                Inspector: <span className="font-medium">{inspection.inspector_name || inspection.inspectorName}</span> • Started:{" "}
                 <span className="font-medium">{inspection.startDate}</span>
               </p>
             </div>

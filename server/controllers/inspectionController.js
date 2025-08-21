@@ -6,6 +6,7 @@ exports.getAllInspections = (req, res) => {
     SELECT i.*, 
            p.name as property_name, 
            p.address as property_address,
+           p.owner as owner,
            ins.name as inspector_name,
            COUNT(ii.id) as total_items,
            COUNT(CASE WHEN ii.is_completed = 1 THEN 1 END) as completed_items
