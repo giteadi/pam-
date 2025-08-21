@@ -240,7 +240,7 @@ export const updateChecklistItem = createAsyncThunk(
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status, comment }),
+        body: JSON.stringify({ is_completed: status === "pass", comment }),
       })
       const data = await handleApiResponse(response)
 

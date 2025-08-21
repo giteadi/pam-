@@ -70,7 +70,8 @@ exports.getInspectionById = (req, res) => {
 
     // Get checklist items
     const itemsSql = `
-      SELECT * FROM inspection_items 
+      SELECT id, inspection_id, category, item_text, is_required, is_completed, comment 
+      FROM inspection_items 
       WHERE inspection_id = ? 
       ORDER BY category, item_text
     `
@@ -130,10 +131,11 @@ exports.createInspection = (req, res) => {
         item.category,
         item.item_text,
         item.is_required || true,
+        item.comment || null,
       ])
 
       const itemsSql = `
-        INSERT INTO inspection_items (inspection_id, category, item_text, is_required) 
+        INSERT INTO inspection_items (inspection_id, category, item_text, is_required, comment) 
         VALUES ?
       `
 
@@ -187,14 +189,14 @@ exports.updateInspection = (req, res) => {
   })
 }
 
-// 5. UPDATE checklist item completion
+// 5. UPDATE checklist item completion and comment
 exports.updateChecklistItem = (req, res) => {
   const itemId = req.params.itemId
-  const { is_completed } = req.body
+  const { is_completed, comment } = req.body
 
-  const sql = "UPDATE inspection_items SET is_completed = ? WHERE id = ?"
+  const sql = "UPDATE inspection_items SET is_completed = ?, comment = ? WHERE id = ?"
 
-  db.query(sql, [is_completed, itemId], (err, result) => {
+  db.query(sql, [is_completed, comment, itemId], (err, result) => {
     if (err) {
       console.error("Update Checklist Item Error:", err)
       return res.status(500).json({
