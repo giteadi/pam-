@@ -3,24 +3,71 @@
 import { useState, useEffect } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { fetchProperties, createProperty, updateProperty, deleteProperty } from "../redux/slices/propertySlice"
+import { fetchInspections } from "../redux/slices/inspectionSlice"
 import PropertyCard from "./property-card"
 import PropertyForm from "./property-form"
+import PropertyInspectionForm from "./PropertyInspectionForm"
 
 export default function PropertiesPage() {
   const dispatch = useDispatch()
   const { properties, loading, error } = useSelector((state) => state.properties)
+  const { inspections } = useSelector((state) => state.inspections)
   const { user } = useSelector((state) => state.users)
 
   const [showForm, setShowForm] = useState(false)
   const [editingProperty, setEditingProperty] = useState(null)
   const [viewingProperty, setViewingProperty] = useState(null)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [inspectingProperty, setInspectingProperty] = useState(null)
+  const [searchTerm, setSearchTerm] = useState("") 
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [assignedProperties, setAssignedProperties] = useState([])
 
   useEffect(() => {
     dispatch(fetchProperties())
+    dispatch(fetchInspections())
   }, [dispatch])
+  
+  // Filter properties assigned to the supervisor/inspector
+ useEffect(() => {
+  if (user && properties.length > 0 && inspections.length > 0) {
+    console.log("User:", user);
+
+    let filteredInspections = [];
+
+    if (user.role === "supervisor") {
+      // Match inspections where this supervisor is the inspector
+      filteredInspections = inspections.filter(
+        insp => insp.inspector_id === user.id || insp.inspectorId === user.id
+      );
+    } else if (user.role === "inspector") {
+      // Match inspections assigned to this inspector
+      filteredInspections = inspections.filter(
+        insp =>
+          insp.inspectorId === user.id ||
+          insp.inspector_id === user.id
+      );
+    }
+
+    console.log("Filtered inspections:", filteredInspections);
+
+    // Collect property IDs
+    const assignedPropertyIds = [
+      ...new Set(filteredInspections.map(insp => insp.propertyId || insp.property_id)),
+    ];
+    console.log("Assigned property IDs:", assignedPropertyIds);
+
+    // Match properties
+    const assignedProps = properties.filter(
+      p => assignedPropertyIds.includes(p.id) || assignedPropertyIds.includes(p.property_id)
+    );
+    console.log("Assigned properties:", assignedProps);
+
+    setAssignedProperties(assignedProps);
+  }
+}, [user, properties, inspections]);
+
+
 
   const hasPermission = (permission) => {
     const userRole = user?.role
@@ -35,16 +82,11 @@ export default function PropertiesPage() {
     return permissions[permission] || false
   }
 
-  const filteredProperties = properties.filter((property) => {
-    if (user?.role === "supervisor") {
-      const userFullName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : ""
-      const isAssignedToSupervisor =
-        property.assigned_supervisor === user?.id ||
-        property.assigned_supervisor === user?.email ||
-        (userFullName && property.assigned_supervisor?.toLowerCase().includes(userFullName.toLowerCase()))
-
-      if (!isAssignedToSupervisor) return false
-    } else if (user?.role === "client") {
+  // Use assignedProperties for supervisors, otherwise use the regular properties list
+  const propertiesToFilter = user?.role === "supervisor" ? assignedProperties : properties;
+  
+  const filteredProperties = propertiesToFilter.filter((property) => {
+    if (user?.role === "client") {
       const userFullName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : ""
       const hasAccess =
         property.contact === user?.email ||
@@ -73,6 +115,10 @@ export default function PropertiesPage() {
 
   const handleViewProperty = (property) => {
     setViewingProperty(property)
+  }
+
+  const handleInspectProperty = (property) => {
+    setInspectingProperty(property)
   }
 
   const handleDeleteProperty = async (property) => {
@@ -239,6 +285,7 @@ export default function PropertiesPage() {
                 onEdit={handleEditProperty}
                 onView={handleViewProperty}
                 onDelete={handleDeleteProperty}
+                onInspect={handleInspectProperty}
                 canAssignTasks={hasPermission("canAssignTasks")}
                 canPerformInspections={hasPermission("canPerformInspections")}
               />
@@ -328,6 +375,15 @@ export default function PropertiesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Property Inspection Modal */}
+      {inspectingProperty && (
+        <PropertyInspectionForm 
+          property={inspectingProperty} 
+          inspections={inspections}
+          onClose={() => setInspectingProperty(null)}
+        />
       )}
     </div>
   )

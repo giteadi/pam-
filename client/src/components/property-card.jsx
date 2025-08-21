@@ -36,6 +36,17 @@ export default function PropertyCard({ property, userRole, onEdit, onView, onDel
               <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full border border-blue-200">
                 {property.type}
               </span>
+              {canInspect && (
+                <button 
+                  onClick={() => onInspect(property)}
+                  className="ml-2 px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full border border-green-200 hover:bg-green-200 transition-colors flex items-center"
+                >
+                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Inspect
+                </button>
+              )}
             </div>
           </div>
           <div className="relative">

@@ -124,8 +124,14 @@ const propertySlice = createSlice({
       })
       .addCase(fetchProperties.fulfilled, (state, action) => {
         state.loading = false
-        state.properties = action.payload
-        state.totalCount = action.payload.length
+        // 🔹 Normalize keys so property.id always exists
+        state.properties = action.payload.map((p) => ({
+          ...p,
+          id: p.id || p.property_id,            // ensure `id`
+          property_id: p.property_id || p.id,   // keep for compatibility
+          name: p.name || p.property_name,      // ensure `name`
+        }))
+        state.totalCount = state.properties.length
       })
       .addCase(fetchProperties.rejected, (state, action) => {
         state.loading = false
@@ -139,7 +145,14 @@ const propertySlice = createSlice({
       })
       .addCase(fetchPropertyById.fulfilled, (state, action) => {
         state.loading = false
-        state.selectedProperty = action.payload
+        const p = action.payload
+        // normalize selected property as well
+        state.selectedProperty = {
+          ...p,
+          id: p.id || p.property_id,
+          property_id: p.property_id || p.id,
+          name: p.name || p.property_name,
+        }
       })
       .addCase(fetchPropertyById.rejected, (state, action) => {
         state.loading = false
@@ -153,7 +166,13 @@ const propertySlice = createSlice({
       })
       .addCase(createProperty.fulfilled, (state, action) => {
         state.loading = false
-        state.properties.unshift(action.payload)
+        const p = action.payload
+        state.properties.unshift({
+          ...p,
+          id: p.id || p.property_id,
+          property_id: p.property_id || p.id,
+          name: p.name || p.property_name,
+        })
         state.totalCount += 1
       })
       .addCase(createProperty.rejected, (state, action) => {
@@ -171,7 +190,10 @@ const propertySlice = createSlice({
         const { propertyId, propertyData } = action.payload
         const index = state.properties.findIndex((p) => p.id === propertyId)
         if (index !== -1) {
-          state.properties[index] = { ...state.properties[index], ...propertyData }
+          state.properties[index] = {
+            ...state.properties[index],
+            ...propertyData,
+          }
         }
         if (state.selectedProperty && state.selectedProperty.id === propertyId) {
           state.selectedProperty = { ...state.selectedProperty, ...propertyData }

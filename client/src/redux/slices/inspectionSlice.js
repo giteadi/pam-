@@ -22,9 +22,12 @@ const transformInspectionData = (apiData) => {
   return {
     id: apiData.id,
     propertyId: apiData.property_id,
+    property_id: apiData.property_id, // Include both formats for compatibility
     propertyName: apiData.property_name || "Unknown Property",
     inspectorId: apiData.inspector_id,
-    assigned_inspector_id: apiData.inspector_id, // For compatibility
+    inspector_id: apiData.inspector_id, // Include both formats for compatibility
+    assigned_inspector_id: apiData.assigned_inspector_id, // Keep original value without overwriting
+    supervisor_id: apiData.supervisor_id, // Include supervisor_id
     inspectorName: apiData.inspector_name || "Unknown Inspector",
     startDate: apiData.start_date,
     scheduledDate: apiData.start_date, // For compatibility with frontend
