@@ -1,10 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import axios from "axios"
 
 export default function PropertyForm({ property, onSubmit, onCancel }) {
   const { loading } = useSelector((state) => state.properties)
+  const { user } = useSelector((state) => state.users)
+  const dispatch = useDispatch()
 
   const [formData, setFormData] = useState({
     name: "",
@@ -12,6 +15,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
     type: "Residential",
     units: "",
     owner: "",
+    owner_id: "",
     contact: "",
     nextInspection: "",
     amenities: [],
@@ -20,6 +24,8 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
   const [errors, setErrors] = useState({})
   const [customAmenity, setCustomAmenity] = useState("")
   const [showCustomInput, setShowCustomInput] = useState(false)
+  const [clients, setClients] = useState([])
+  const [clientsLoading, setClientsLoading] = useState(false)
 
   const predefinedAmenities = [
     "Swimming Pool",
@@ -36,6 +42,30 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
     "Business Center",
   ]
 
+  // Fetch clients for dropdown when component mounts
+  useEffect(() => {
+    // Fetch clients regardless of user role
+    console.log('User in property form:', user)
+    setClientsLoading(true)
+      console.log('Fetching clients for admin user')
+      axios.get('/api/users')
+        .then(response => {
+          console.log('API response:', response.data)
+          if (response.data.success) {
+            // Filter only clients from the response
+            const clientUsers = response.data.data.filter(user => user.role === 'client' && user.status === 'active')
+            console.log('Filtered client users:', clientUsers)
+            setClients(clientUsers)
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching clients:', error)
+        })
+        .finally(() => {
+          setClientsLoading(false)
+        })
+  }, [user])
+
   useEffect(() => {
     if (property) {
       setFormData({
@@ -44,6 +74,7 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
         type: property.type || "Residential",
         units: property.units || "",
         owner: property.owner || "",
+        owner_id: property.owner_id || "",
         contact: property.contact || "",
         nextInspection: property.nextInspection || "",
         amenities: property.amenities || [],
@@ -69,10 +100,14 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
     e.preventDefault()
     console.log("[v0] Property form submitted with data:", formData)
     if (validateForm()) {
-      onSubmit({
+      // Include owner_id in submission if it exists and user is admin
+      const submissionData = {
         ...formData,
         units: Number.parseInt(formData.units),
-      })
+        // Only include owner_id if it has a value and user is admin
+        ...(user?.role === 'admin' && formData.owner_id ? { owner_id: formData.owner_id } : {})
+      }
+      onSubmit(submissionData)
     }
   }
 
@@ -236,18 +271,65 @@ export default function PropertyForm({ property, onSubmit, onCancel }) {
               <label htmlFor="owner" className="text-sm font-medium text-gray-700">
                 Owner/Management Company *
               </label>
-              <input
-                id="owner"
-                name="owner"
-                type="text"
-                value={formData.owner}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                  errors.owner ? "border-red-500" : "border-gray-300"
-                }`}
-                placeholder="Enter owner name"
-                disabled={loading}
-              />
+              {user?.role === 'admin' ? (
+                <div>
+                  <select
+                    id="owner_id"
+                    name="owner_id"
+                    value={formData.owner_id}
+                    onChange={(e) => {
+                      console.log('Selected client ID:', e.target.value);
+                      const selectedClient = clients.find(client => client.id === Number(e.target.value));
+                      console.log('Found selected client:', selectedClient);
+                      handleChange({
+                        target: {
+                          name: 'owner_id',
+                          value: e.target.value
+                        }
+                      });
+                      if (selectedClient) {
+                        handleChange({
+                          target: {
+                            name: 'owner',
+                            value: selectedClient.name
+                          }
+                        });
+                        handleChange({
+                          target: {
+                            name: 'contact',
+                            value: selectedClient.email
+                          }
+                        });
+                      }
+                    }}
+                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                      errors.owner ? "border-red-500" : "border-gray-300"
+                    }`}
+                    disabled={loading || clientsLoading}
+                  >
+                    <option value="">Select a client</option>
+                    {console.log('Rendering client dropdown with clients:', clients)}
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                  {clientsLoading && <p className="text-sm text-blue-600">Loading clients...</p>}
+                  {!clientsLoading && clients.length === 0 && <p className="text-sm text-red-600">No clients available</p>}
+                </div>
+              ) : (
+                <input
+                  id="owner"
+                  name="owner"
+                  type="text"
+                  value={formData.owner}
+                  onChange={handleChange}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                    errors.owner ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="Enter owner name"
+                  disabled={loading}
+                />
+              )}
               {errors.owner && <p className="text-sm text-red-600">{errors.owner}</p>}
             </div>
 

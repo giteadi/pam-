@@ -15,6 +15,7 @@ router.post("/reset-password", userController.resetPassword)
 
 // CRUD
 router.get("/", userController.getAllUsers)
+router.get("/clients/dropdown", userController.getClientsForDropdown)
 router.get("/:id", userController.getUserById)
 router.post("/", userController.createUser)
 router.put("/:id", userController.updateUser)

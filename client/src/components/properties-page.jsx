@@ -87,10 +87,11 @@ export default function PropertiesPage() {
   
   const filteredProperties = propertiesToFilter.filter((property) => {
     if (user?.role === "client") {
-      const userFullName = user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : ""
+      // Filter properties where owner matches user ID or name, or contact matches email
       const hasAccess =
         property.contact === user?.email ||
-        (userFullName && property.owner?.toLowerCase().includes(userFullName.toLowerCase()))
+        property.owner === user?.id?.toString() ||
+        property.owner === user?.name
       if (!hasAccess) return false
     }
 

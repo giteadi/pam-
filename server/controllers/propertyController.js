@@ -73,7 +73,7 @@ exports.getPropertyById = (req, res) => {
 
 // 3. CREATE new property
 exports.createProperty = (req, res) => {
-  const { name, address, type, units, owner, contact, amenities } = req.body
+  const { name, address, type, units, owner, owner_id, contact, amenities } = req.body
 
   if (!name || !type) {
     return res.status(400).json({
@@ -82,12 +82,19 @@ exports.createProperty = (req, res) => {
     })
   }
 
+  // If owner_id is provided, use it as the owner value
+  // This happens when admin selects a client from dropdown
+  const ownerValue = owner_id || owner
+  
+  // Log the owner information for debugging
+  console.log('Creating property with owner:', { owner_id, owner, ownerValue })
+
   const sql = `
     INSERT INTO properties (name, address, type, units, owner, contact)
     VALUES (?, ?, ?, ?, ?, ?)
   `
 
-  db.query(sql, [name, address, type, units || 0, owner, contact], (err, result) => {
+  db.query(sql, [name, address, type, units || 0, ownerValue, contact], (err, result) => {
     if (err) {
       console.error("Create Property Error:", err)
       return res.status(500).json({
@@ -122,7 +129,14 @@ exports.createProperty = (req, res) => {
 // 4. UPDATE property
 exports.updateProperty = (req, res) => {
   const propertyId = req.params.id
-  const { name, address, type, units, status, owner, contact, amenities } = req.body
+  const { name, address, type, units, status, owner, owner_id, contact, amenities } = req.body
+
+  // If owner_id is provided, use it as the owner value
+  // This happens when admin selects a client from dropdown
+  const ownerValue = owner_id || owner
+  
+  // Log the owner information for debugging
+  console.log('Updating property with owner:', { owner_id, owner, ownerValue })
 
   const sql = `
     UPDATE properties 
@@ -130,7 +144,7 @@ exports.updateProperty = (req, res) => {
     WHERE id = ?
   `
 
-  db.query(sql, [name, address, type, units, status, owner, contact, propertyId], (err, result) => {
+  db.query(sql, [name, address, type, units, status, ownerValue, contact, propertyId], (err, result) => {
     if (err) {
       console.error("Update Property Error:", err)
       return res.status(500).json({

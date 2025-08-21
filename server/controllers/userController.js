@@ -5,6 +5,31 @@ const { sendOtpEmail } = require("../middlewares/mail")
 const otpStore = new Map()
 const passwordResetOtpStore = new Map()
 
+// Function to get clients for dropdown
+exports.getClientsForDropdown = (req, res) => {
+  const sql = `
+    SELECT id, name, email
+    FROM users
+    WHERE role = 'client' AND status = 'active'
+    ORDER BY name ASC
+  `
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("Get Clients For Dropdown Error:", err)
+      return res.status(500).json({
+        success: false,
+        msg: "Failed to fetch clients",
+        error: err.message,
+      })
+    }
+    return res.status(200).json({
+      success: true,
+      data: results,
+    })
+  })
+}
+
 const generateAndSendOtp = async (email, store) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString()
   const expires = Date.now() + 15 * 60 * 1000 // 15 minutes
