@@ -378,20 +378,22 @@ export default function EnhancedInspectionsPage() {
                               />
                             </svg>
                           </button>
-                          <button
-                            onClick={() => handleEdit(inspection)}
-                            className="text-amber-600 hover:text-amber-800 p-1 rounded transition-colors duration-150"
-                            title="Edit"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
+                          {user?.role !== "client" && (
+                            <button
+                              onClick={() => handleEdit(inspection)}
+                              className="text-amber-600 hover:text-amber-800 p-1 rounded transition-colors duration-150"
+                              title="Edit"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
+                              </svg>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -653,12 +655,14 @@ export default function EnhancedInspectionsPage() {
                     <label className="text-sm font-semibold text-slate-700">Property</label>
                     <p className="text-slate-900 mt-1">{viewingInspection.propertyName || 'N/A'}</p>
                   </div>
-                  <div>
-                    <label className="text-sm font-semibold text-slate-700">Inspector</label>
-                    <p className="text-slate-900 mt-1">
-                      {viewingInspection.inspector_name || viewingInspection.inspectorName || 'N/A'}
-                    </p>
-                  </div>
+                  {user?.role !== "client" && (
+                    <div>
+                      <label className="text-sm font-semibold text-slate-700">Inspector</label>
+                      <p className="text-slate-900 mt-1">
+                        {viewingInspection.inspector_name || viewingInspection.inspectorName || 'N/A'}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <label className="text-sm font-semibold text-slate-700">Scheduled Date</label>
                     <p className="text-slate-900 mt-1">
