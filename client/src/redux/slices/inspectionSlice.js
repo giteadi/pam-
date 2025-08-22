@@ -3,6 +3,11 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit"
 const BASE_URL = "http://localhost:4000"
 
 const handleApiResponse = async (response) => {
+  // Check for specific error status codes first
+  if (response.status === 413) {
+    throw new Error("Payload too large. Please reduce the size of your data or upload fewer/smaller photos.")
+  }
+  
   const contentType = response.headers.get("content-type")
 
   if (!contentType || !contentType.includes("application/json")) {
@@ -10,7 +15,7 @@ const handleApiResponse = async (response) => {
     if (text.includes("<!doctype") || text.includes("<html")) {
       throw new Error("Server returned HTML instead of JSON. Check if your backend server is running on localhost:4000")
     }
-    throw new Error("Server did not return JSON response")
+    throw new Error(`Server did not return JSON response. Status: ${response.status} ${response.statusText}`)
   }
 
   const data = await response.json()
@@ -170,6 +175,11 @@ export const updateInspection = createAsyncThunk(
     try {
       console.log("[Redux] Updating inspection:", id, inspectionData)
       
+      // Check if photos array is too large and optimize if needed
+      if (inspectionData.photos && inspectionData.photos.length > 5) {
+        console.warn("[Redux] Large number of photos detected, consider reducing the number of photos")
+      }
+      
       const response = await fetch(`${BASE_URL}/api/inspections/${id}`, {
         method: "PUT",
         headers: {
@@ -177,6 +187,12 @@ export const updateInspection = createAsyncThunk(
         },
         body: JSON.stringify(inspectionData),
       })
+      
+      // Handle 413 Payload Too Large error specifically
+      if (response.status === 413) {
+        return rejectWithValue("Payload too large. Please reduce the size of your data or upload fewer/smaller photos.")
+      }
+      
       const data = await handleApiResponse(response)
 
       if (!data.success) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { updateInspection } from "../redux/slices/inspectionSlice"
 
@@ -28,6 +28,15 @@ export default function PropertyInspectionForm({ property, onClose, onSave }) {
   const [customAmenities, setCustomAmenities] = useState([])
   const [newAmenityName, setNewAmenityName] = useState("")
   const [newAmenityComment, setNewAmenityComment] = useState("")
+  
+  // Photo capture and location state
+  const [photos, setPhotos] = useState([])
+  const [showCamera, setShowCamera] = useState(false)
+  const [currentLocation, setCurrentLocation] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const [stream, setStream] = useState(null)
   
   const handleAmenityChange = (name, checked) => {
     setAmenities(prev => ({
@@ -92,41 +101,112 @@ export default function PropertyInspectionForm({ property, onClose, onSave }) {
   
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setUploading(true)
     
-    // Prepare data for saving
-    const inspectionData = {
-      property_id: property.id,
-      notes,
-      amenities: Object.entries(amenities).map(([name, details]) => ({
-        name,
-        status: details.status,
-        comment: details.comment
-      })),
-      customAmenities
-    }
-    
-    // If there's an existing inspection for this property, update it
-    if (propertyInspections.length > 0) {
-      const inspectionId = propertyInspections[0].id
-      try {
-        await dispatch(updateInspection({
-          id: inspectionId,
-          data: {
-            notes,
-            checklist: {
-              ...amenities,
-              customAmenities
-            },
-            progress: calculateProgress()
-          }
-        })).unwrap()
-      } catch (error) {
-        console.error("Failed to update inspection:", error)
+    try {
+      // Find existing inspection or create new one
+      const existingInspection = propertyInspections.length > 0 ? propertyInspections[0] : null
+      
+      if (!existingInspection) {
+        console.error("No existing inspection found")
+        setUploading(false)
+        return
       }
+      
+      // Upload photos to server if there are any
+      const uploadedPhotos = []
+      
+      if (photos.length > 0) {
+        for (const photo of photos) {
+          try {
+            console.log("Processing photo:", photo)
+            
+            // Create a new Image to load the data URL
+            const img = new Image()
+            img.src = photo.dataUrl
+            
+            // Wait for the image to load
+            await new Promise((resolve) => {
+              img.onload = resolve
+            })
+            
+            // Create a canvas with the same dimensions as the image
+            const canvas = document.createElement('canvas')
+            canvas.width = img.width
+            canvas.height = img.height
+            
+            // Draw the image on the canvas
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0)
+            
+            // Convert canvas to blob directly
+            const blob = await new Promise(resolve => {
+              canvas.toBlob(resolve, 'image/jpeg', 0.95)
+            })
+            
+            console.log("Created blob:", blob)
+            
+            // Create FormData
+            const formData = new FormData()
+            formData.append('photo', blob, 'photo.jpg')
+            
+            if (photo.location) {
+              formData.append('latitude', photo.location.latitude)
+              formData.append('longitude', photo.location.longitude)
+            }
+            
+            // Upload to server
+            const BASE_URL = "http://localhost:4000";
+            const uploadUrl = `${BASE_URL}/api/photos/upload/${existingInspection.id}`;
+            const uploadResponse = await fetch(uploadUrl, {
+              method: 'POST',
+              body: formData
+            })
+            
+            if (!uploadResponse.ok) {
+              throw new Error(`Failed to upload photo: ${uploadResponse.statusText}`)
+            }
+            
+            const uploadResult = await uploadResponse.json()
+            uploadedPhotos.push(uploadResult.data)
+          } catch (error) {
+            console.error("Error uploading photo:", error)
+          }
+        }
+      }
+      
+      // Prepare inspection data
+      const inspectionData = {
+        property_id: property.id,
+        notes,
+        checklist: {
+          ...amenities,
+          customAmenities
+        },
+        photos: uploadedPhotos,
+        location: currentLocation,
+        progress: calculateProgress()
+      }
+      
+      // Update existing inspection
+      await dispatch(updateInspection({
+        id: existingInspection.id,
+        data: inspectionData
+      })).unwrap()
+      
+      // Call the onSave callback with the inspection data if provided
+      if (typeof onSave === 'function') {
+        onSave(inspectionData)
+      }
+      
+      // Close the form
+      onClose()
+    } catch (error) {
+      console.error("Failed to submit inspection:", error)
+      alert("Failed to save inspection. Please try again.")
+    } finally {
+      setUploading(false)
     }
-    
-    // Call the onSave callback with the inspection data
-    onSave(inspectionData)
   }
   
   const calculateProgress = () => {
@@ -137,11 +217,87 @@ export default function PropertyInspectionForm({ property, onClose, onSave }) {
     return totalItems > 0 ? Math.round((checkedItems / totalItems) * 100) : 0
   }
   
+  // Camera and photo capture functions
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true })
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream
+        setStream(mediaStream)
+      }
+      setShowCamera(true)
+      // Get location when starting camera
+      getCurrentLocation()
+    } catch (error) {
+      console.error("Error accessing camera:", error)
+      alert("Unable to access camera. Please check permissions.")
+    }
+  }
+  
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+    }
+    setShowCamera(false)
+  }
+  
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const context = canvas.getContext('2d')
+      
+      // Set canvas dimensions to match video at full resolution
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      
+      // Draw the current video frame to the canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // Convert canvas to data URL with high quality (0.9)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9)
+      
+      // Add the photo to the photos array with location and timestamp
+      setPhotos(prevPhotos => [...prevPhotos, {
+        id: Date.now().toString(),
+        dataUrl,
+        timestamp: new Date().toISOString(),
+        location: currentLocation
+      }])
+    }
+  }
+  
+  const removePhoto = (index) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index))
+  }
+  
+  // Location tracking
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          })
+        },
+        (error) => {
+          console.error("Error getting location:", error)
+          alert("Unable to get your location. Please check permissions.")
+        }
+      )
+    } else {
+      alert("Geolocation is not supported by this browser.")
+    }
+  }
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-800">Inspect Property: {property.name}</h2>
+          <h2 className="text-2xl font-bold text-slate-800">Inspect Site: {property.name}</h2>
           <button
             onClick={onClose}
             className="p-2 text-slate-400 hover:text-slate-600 hover:bg-white rounded-lg transition-all duration-200"
@@ -155,7 +311,7 @@ export default function PropertyInspectionForm({ property, onClose, onSave }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Property Info */}
           <div className="bg-slate-50 rounded-xl p-4">
-            <h3 className="font-bold text-slate-800 mb-3">Property Information</h3>
+            <h3 className="font-bold text-slate-800 mb-3">Site Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-slate-600">Name:</span>
@@ -179,7 +335,7 @@ export default function PropertyInspectionForm({ property, onClose, onSave }) {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add general notes about the property inspection..."
+              placeholder="Add general notes about the site inspection..."
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 min-h-[100px]"
             />
             {notes && (
@@ -311,6 +467,101 @@ export default function PropertyInspectionForm({ property, onClose, onSave }) {
             )}
           </div>
           
+          {/* Photo Documentation */}
+          <div className="bg-slate-50 rounded-xl p-4">
+            <h3 className="font-bold text-slate-800 mb-3">Photo Documentation</h3>
+            
+            {/* Camera controls */}
+            <div className="mb-4">
+              {!showCamera ? (
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center space-x-2 hover:bg-blue-700 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Open Camera</span>
+                </button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative bg-black rounded-lg overflow-hidden">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-auto"
+                    />
+                    <canvas ref={canvasRef} className="hidden" />
+                    
+                    {/* Location indicator */}
+                    {currentLocation && (
+                      <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs p-2 rounded">
+                        <div>Lat: {currentLocation.latitude.toFixed(6)}</div>
+                        <div>Lng: {currentLocation.longitude.toFixed(6)}</div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg flex items-center justify-center space-x-2 hover:bg-green-700 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Capture Photo</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      Close Camera
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Photo gallery */}
+            {photos.length > 0 && (
+              <div>
+                <h4 className="font-medium text-slate-700 mb-2">Captured Photos ({photos.length})</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {photos.map((photo, index) => (
+                    <div key={index} className="relative group">
+                      <img 
+                        src={photo.dataUrl} 
+                        alt={`Photo ${index + 1}`} 
+                        className="w-full h-32 object-cover rounded-lg border border-slate-200" 
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                      {photo.location && (
+                        <div className="absolute bottom-1 left-1 right-1 bg-black bg-opacity-70 text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="truncate">{new Date(photo.timestamp).toLocaleString()}</div>
+                          <div className="truncate">GPS: {photo.location.latitude.toFixed(4)}, {photo.location.longitude.toFixed(4)}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
           {/* Progress */}
           <div className="bg-slate-50 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
@@ -330,19 +581,20 @@ export default function PropertyInspectionForm({ property, onClose, onSave }) {
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors duration-200"
+              disabled={uploading}
+              className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={uploading}
               className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-xl font-medium transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex items-center space-x-2"
             >
-              {loading ? (
+              {uploading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Saving...</span>
+                  <span>Uploading...</span>
                 </>
               ) : (
                 <span>Save Inspection</span>

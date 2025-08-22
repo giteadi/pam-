@@ -11,6 +11,9 @@ import InspectionsPage from "./components/inspections-page"
 import PropertiesPage from "./components/properties-page"
 import UserManagement from "./components/user-management"
 import ProgressMonitoring from "./components/progress-monitoring"
+import AdminPhotosPage from "./pages/admin/photos-page"
+import ClientPhotosPage from "./pages/client/photos-page"
+import SupervisorPhotosPage from "./pages/supervisor/photos-page"
 
 export default function App() {
   return (
@@ -80,6 +83,33 @@ export default function App() {
                 element={
                   <AuthGuard>
                     <Dashboard />
+                  </AuthGuard>
+                }
+              />
+
+              <Route
+                path="/admin/photos"
+                element={
+                  <AuthGuard requiredRoles={["admin"]}>
+                    <AdminPhotosPage />
+                  </AuthGuard>
+                }
+              />
+
+              <Route
+                path="/client/photos"
+                element={
+                  <AuthGuard requiredRoles={["client"]}>
+                    <ClientPhotosPage />
+                  </AuthGuard>
+                }
+              />
+
+              <Route
+                path="/supervisor/photos"
+                element={
+                  <AuthGuard requiredRoles={["supervisor"]}>
+                    <SupervisorPhotosPage />
                   </AuthGuard>
                 }
               />

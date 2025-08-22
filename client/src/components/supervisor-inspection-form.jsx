@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSelector } from "react-redux"
 
 export default function SupervisorInspectionForm({ property, onSubmit, onCancel }) {
@@ -18,10 +18,19 @@ export default function SupervisorInspectionForm({ property, onSubmit, onCancel 
     photosRequired: false,
     followUpRequired: false,
     completedDate: new Date().toISOString().split("T")[0],
+    photos: [],
   })
 
   const [customIssue, setCustomIssue] = useState("")
   const [showCustomIssue, setShowCustomIssue] = useState(false)
+  
+  // Camera and photo capture states
+  const [showCamera, setShowCamera] = useState(false)
+  const [stream, setStream] = useState(null)
+  const [currentLocation, setCurrentLocation] = useState(null)
+  const [uploading, setUploading] = useState(false)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
 
   // Common property issues
   const commonIssues = [
@@ -86,16 +95,172 @@ export default function SupervisorInspectionForm({ property, onSubmit, onCancel 
     }))
   }
 
+  // Camera and photo capture functions
+  const startCamera = async () => {
+    try {
+      // Get location first
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setCurrentLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              timestamp: new Date().toISOString(),
+            })
+          },
+          (error) => {
+            console.error("Error getting location:", error)
+            alert("Unable to get your location. Please check permissions.")
+          }
+        )
+      } else {
+        alert("Geolocation is not supported by this browser.")
+      }
+
+      // Then start camera
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true })
+      setStream(mediaStream)
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream
+      }
+      setShowCamera(true)
+    } catch (error) {
+      console.error("Error accessing camera:", error)
+      alert("Unable to access camera. Please check permissions.")
+    }
+  }
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+    }
+    setShowCamera(false)
+  }
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current && currentLocation) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const context = canvas.getContext('2d')
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      
+      // Draw the current video frame to the canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // Convert canvas to data URL
+      const photoDataUrl = canvas.toDataURL('image/jpeg')
+      
+      // Add to photos array with location data
+      const newPhoto = {
+        id: `photo_${Date.now()}`,
+        dataUrl: photoDataUrl,
+        timestamp: new Date().toISOString(),
+        location: currentLocation,
+      }
+      
+      setInspectionData(prev => ({
+        ...prev,
+        photos: [...prev.photos, newPhoto]
+      }))
+      
+      // Stop camera after capturing
+      stopCamera()
+    } else {
+      alert("Camera not ready or location not available. Please try again.")
+    }
+  }
+
+  const removePhoto = (index) => {
+    setInspectionData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
     try {
+      // Upload photos to server if there are any
+      const uploadedPhotos = []
+      
+      if (inspectionData.photos.length > 0) {
+        setUploading(true)
+        
+        for (const photo of inspectionData.photos) {
+          try {
+            console.log("Processing photo:", photo)
+            
+            // Create a new Image to load the data URL
+            const img = new Image()
+            img.src = photo.dataUrl
+            
+            // Wait for the image to load
+            await new Promise((resolve) => {
+              img.onload = resolve
+            })
+            
+            // Create a canvas with the same dimensions as the image
+            const canvas = document.createElement('canvas')
+            canvas.width = img.width
+            canvas.height = img.height
+            
+            // Draw the image on the canvas
+            const ctx = canvas.getContext('2d')
+            ctx.drawImage(img, 0, 0)
+            
+            // Convert canvas to blob directly
+            const blob = await new Promise(resolve => {
+              canvas.toBlob(resolve, 'image/jpeg', 0.95)
+            })
+            
+            console.log("Created blob:", blob)
+            
+            // Create FormData
+            const formData = new FormData()
+            formData.append('photo', blob, 'photo.jpg')
+            
+            if (photo.location) {
+              formData.append('latitude', photo.location.latitude)
+              formData.append('longitude', photo.location.longitude)
+            }
+            
+            // Upload to server - assuming we have an inspection ID
+            // If we don't have an inspection ID yet, we'll need to create one first or handle this differently
+            const inspectionId = property?.id || inspectionData.propertyId
+            
+            const BASE_URL = "http://localhost:4000";
+            const uploadUrl = `${BASE_URL}/api/photos/upload/${inspectionId}`;
+            const uploadResponse = await fetch(uploadUrl, {
+              method: 'POST',
+              body: formData
+            })
+            
+            if (!uploadResponse.ok) {
+              throw new Error(`Failed to upload photo: ${uploadResponse.statusText}`)
+            }
+            
+            const uploadResult = await uploadResponse.json()
+            uploadedPhotos.push(uploadResult.data)
+          } catch (error) {
+            console.error("Error uploading photo:", error)
+          }
+        }
+        
+        setUploading(false)
+      }
+      
       const inspectionRecord = {
         ...inspectionData,
         status: "completed",
         progress: 100,
         notes: `Review: ${inspectionData.review}\n\nRecommendations: ${inspectionData.recommendations}\n\nIssues Found: ${inspectionData.issuesFound.join(", ")}`,
+        photos: uploadedPhotos.length > 0 ? uploadedPhotos : inspectionData.photos
       }
 
       console.log("[v0] Submitting supervisor inspection:", inspectionRecord)
@@ -379,6 +544,142 @@ export default function SupervisorInspectionForm({ property, onSubmit, onCancel 
             )}
           </div>
 
+          {/* Photo Capture */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+              Live Photos with Location
+            </h3>
+            
+            {!showCamera ? (
+              <button
+                type="button"
+                onClick={startCamera}
+                className="flex items-center justify-center w-full px-4 py-3 bg-indigo-100 text-indigo-700 font-medium rounded-lg hover:bg-indigo-200 transition-colors"
+              >
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                Take Photo with Location
+              </button>
+            ) : (
+              <div className="space-y-4">
+                <div className="relative bg-black rounded-lg overflow-hidden">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    className="w-full h-64 object-cover"
+                  />
+                  <canvas ref={canvasRef} className="hidden" />
+                  
+                  <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-4">
+                    <button
+                      type="button"
+                      onClick={capturePhoto}
+                      className="p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                      title="Capture Photo"
+                    >
+                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopCamera}
+                      className="p-3 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                      title="Cancel"
+                    >
+                      <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  {currentLocation && (
+                    <div className="absolute top-4 right-4 bg-black bg-opacity-70 text-white text-xs p-2 rounded">
+                      <div>GPS: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}</div>
+                      <div>{new Date(currentLocation.timestamp).toLocaleTimeString()}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Display captured photos */}
+            {inspectionData.photos.length > 0 && (
+              <div className="mt-4">
+                <h4 className="font-medium text-gray-700 mb-2">Captured Photos ({inspectionData.photos.length})</h4>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {inspectionData.photos.map((photo, index) => (
+                    <div key={photo.id} className="relative group rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={photo.dataUrl}
+                        alt={`Inspection photo ${index + 1}`}
+                        className="w-full h-32 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(index)}
+                        className="absolute top-1 right-1 p-1 bg-red-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Remove photo"
+                      >
+                        <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                      {photo.location && (
+                        <div className="absolute bottom-1 left-1 right-1 bg-black bg-opacity-70 text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="truncate">{new Date(photo.timestamp).toLocaleString()}</div>
+                          <div className="truncate">GPS: {photo.location.latitude.toFixed(4)}, {photo.location.longitude.toFixed(4)}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
           {/* Additional Options */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Additional Actions</h3>

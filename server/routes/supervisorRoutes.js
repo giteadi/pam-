@@ -27,4 +27,7 @@ router.post("/:id/assign-task", supervisorController.assignTaskToSupervisor)
 // Get supervisor workload
 router.get("/:id/workload", supervisorController.getSupervisorWorkload)
 
+// Get properties assigned to a supervisor
+router.get("/:id/properties", supervisorController.getSupervisorProperties)
+
 module.exports = router

@@ -167,14 +167,14 @@ export default function PropertiesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                Properties
+               Sites
               </h1>
               <p className="text-slate-600 mt-2">
                 {user?.role === "admin"
                   ? "Manage your property portfolio"
                   : user?.role === "supervisor"
-                    ? "View and inspect assigned properties"
-                    : "View your assigned properties"}
+                    ? "View and inspect assigned sites"
+                    : "View your assigned sites"}
               </p>
             </div>
             {hasPermission("canCreateProperty") && (

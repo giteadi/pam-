@@ -1,4 +1,50 @@
-const db = require("../config/database")
+const { db } = require("../config/db")
+
+// Get properties assigned to a supervisor
+const getSupervisorProperties = async (req, res) => {
+  try {
+    const supervisorId = req.params.id
+
+    const sql = `
+      SELECT DISTINCT p.*,
+             GROUP_CONCAT(DISTINCT pa.amenity) as amenities
+      FROM properties p
+      LEFT JOIN property_amenities pa ON p.id = pa.property_id
+      LEFT JOIN inspections i ON p.id = i.property_id
+      LEFT JOIN users u ON u.id = ?
+      WHERE p.assigned_supervisor = ? 
+         OR p.assigned_supervisor = u.email
+         OR p.assigned_supervisor LIKE CONCAT('%', u.name, '%')
+         OR i.inspector_id = ?
+         OR i.supervisor_id = ?
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+    `
+
+    const results = await db.query(sql, [supervisorId, supervisorId, supervisorId, supervisorId])
+
+    // Parse amenities for each property
+    const properties = results.map(property => {
+      return {
+        ...property,
+        amenities: property.amenities ? property.amenities.split(",") : []
+      }
+    })
+
+    return res.status(200).json({
+      success: true,
+      data: properties,
+      count: properties.length,
+    })
+  } catch (err) {
+    console.error("Get Supervisor Properties Error:", err)
+    return res.status(500).json({
+      success: false,
+      msg: "Failed to fetch supervisor properties",
+      error: err.message,
+    })
+  }
+}
 
 // Get all supervisors
 const getAllSupervisors = async (req, res) => {
@@ -380,4 +426,5 @@ module.exports = {
   getAvailableSupervisors,
   assignTaskToSupervisor,
   getSupervisorWorkload,
+  getSupervisorProperties,
 }

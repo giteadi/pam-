@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useDispatch, useSelector } from "react-redux"
 import { updateChecklistItem } from "../redux/slices/inspectionSlice"
 
@@ -15,6 +15,13 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
   const [customAmenities, setCustomAmenities] = useState(inspection.customAmenities || [])
   const [newCustomAmenity, setNewCustomAmenity] = useState("")
   const [showCustomAmenityInput, setShowCustomAmenityInput] = useState(false)
+  const [photos, setPhotos] = useState(inspection.photos || [])
+  const [showCamera, setShowCamera] = useState(false)
+  const [currentLocation, setCurrentLocation] = useState(inspection.location || null)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const [stream, setStream] = useState(null)
+  const [uploading, setUploading] = useState(false)
 
   // Mock template - in real app this would come from Redux or API
   const template = [
@@ -70,6 +77,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
       notes,
       customAmenities,
       progress: updatedProgress,
+      photos,
+      location: currentLocation,
     })
     await new Promise((resolve) => setTimeout(resolve, 500))
     setIsAutoSaving(false)
@@ -113,6 +122,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
       notes,
       customAmenities,
       progress: updatedProgress,
+      photos,
+      location: currentLocation,
     })
   }
 
@@ -125,6 +136,8 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
       progress: updatedProgress,
       status: "completed",
       completedDate: new Date().toISOString().split("T")[0],
+      photos,
+      location: currentLocation,
     })
   }
 
@@ -214,6 +227,117 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
     console.log("[v0] Removed custom amenity:", amenityId)
   }
 
+  // Photo capture functions
+  const startCamera = async () => {
+    try {
+      // Get location first
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setCurrentLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              timestamp: new Date().toISOString(),
+            })
+          },
+          (error) => {
+            console.error("Error getting location:", error)
+          }
+        )
+      }
+
+      // Then start camera
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true })
+      setStream(mediaStream)
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream
+      }
+      setShowCamera(true)
+    } catch (error) {
+      console.error("Error accessing camera:", error)
+    }
+  }
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop())
+      setStream(null)
+    }
+    setShowCamera(false)
+  }
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const context = canvas.getContext('2d')
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      
+      // Draw the current video frame to the canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+      
+      // Convert canvas to data URL
+      const photoDataUrl = canvas.toDataURL('image/jpeg')
+      
+      // Upload to Cloudinary
+      uploadToCloudinary(photoDataUrl)
+    }
+  }
+
+  const uploadToCloudinary = async (dataUrl) => {
+    try {
+      setUploading(true)
+      
+      // Convert data URL to blob
+      const response = await fetch(dataUrl)
+      const blob = await response.blob()
+      
+      // Create form data for upload
+      const formData = new FormData()
+      formData.append('file', blob, 'inspection-photo.jpg')
+      formData.append('inspectionId', inspection.id)
+      
+      // Send to server
+      const BASE_URL = "http://localhost:4000";
+      const uploadUrl = `${BASE_URL}/api/upload-photo`;
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        body: formData,
+      })
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload photo')
+      }
+      
+      const result = await uploadResponse.json()
+      
+      // Add the new photo to the photos array
+      const newPhoto = {
+        id: `photo_${Date.now()}`,
+        url: result.url,
+        timestamp: new Date().toISOString(),
+        location: currentLocation,
+      }
+      
+      setPhotos([...photos, newPhoto])
+      setUploading(false)
+      
+      // Auto-save after adding a photo
+      handleAutoSave()
+      
+    } catch (error) {
+      console.error('Error uploading photo:', error)
+      setUploading(false)
+    }
+  }
+
+  const removePhoto = (photoId) => {
+    setPhotos(photos.filter(photo => photo.id !== photoId))
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
@@ -223,7 +347,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
             <div>
               <h1 className="text-2xl font-bold text-slate-800">{inspection.propertyName}</h1>
               <p className="text-sm text-slate-600 mt-1">
-                Inspector: <span className="font-medium">{inspection.inspector_name || inspection.inspectorName}</span> • Started:{" "}
+                Site Supervisor: <span className="font-medium">{inspection.inspector_name || inspection.inspectorName}</span> • Started:{" "}
                 <span className="font-medium">{inspection.startDate}</span>
               </p>
             </div>
@@ -398,7 +522,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                     </button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Add property-specific amenities discovered during inspection
+                    Add site-specific amenities discovered during inspection
                   </p>
                 </div>
               )}
@@ -497,7 +621,7 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                   <p>No custom amenities added yet</p>
-                  <p className="text-sm">Click "Add Custom" to add property-specific amenities</p>
+                  <p className="text-sm">Click "Add Custom" to add site-specific amenities</p>
                 </div>
               )}
             </div>
@@ -530,6 +654,109 @@ export default function InspectionChecklist({ inspection, onSave, onComplete }) 
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Photo Documentation */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-slate-800">Photo Documentation</h3>
+              <button
+                onClick={showCamera ? stopCamera : startCamera}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 ${showCamera 
+                  ? 'bg-red-500 text-white shadow-lg' 
+                  : 'bg-blue-500 text-white hover:bg-blue-600 shadow-lg'}`}
+                disabled={loading || uploading}
+              >
+                {showCamera ? 'Close Camera' : 'Take Photo'}
+              </button>
+            </div>
+
+            {/* Camera View */}
+            {showCamera && (
+              <div className="mb-6 bg-slate-900 rounded-xl p-4 relative">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className="w-full rounded-lg shadow-lg"
+                />
+                <canvas ref={canvasRef} className="hidden" />
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={capturePhoto}
+                    className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-medium transition-all duration-200 shadow-lg flex items-center space-x-2"
+                    disabled={uploading}
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Capture Photo</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                {currentLocation && (
+                  <div className="mt-2 text-xs text-slate-300 text-center">
+                    <p>Location: {currentLocation.latitude.toFixed(6)}, {currentLocation.longitude.toFixed(6)}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Photos Gallery */}
+            <div className="mt-4">
+              {photos.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative group">
+                      <img
+                        src={photo.url}
+                        alt="Inspection photo"
+                        className="w-full h-48 object-cover rounded-lg shadow-md"
+                      />
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-200 rounded-lg flex items-center justify-center">
+                        <button
+                          onClick={() => removePhoto(photo.id)}
+                          className="opacity-0 group-hover:opacity-100 p-2 bg-red-500 text-white rounded-full transition-all duration-200"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div className="mt-1 text-xs text-slate-500">
+                        <p>{new Date(photo.timestamp).toLocaleString()}</p>
+                        {photo.location && (
+                          <p className="truncate">GPS: {photo.location.latitude.toFixed(6)}, {photo.location.longitude.toFixed(6)}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  <svg
+                    className="w-12 h-12 mx-auto mb-3 opacity-50"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <p>No photos added yet</p>
+                  <p className="text-sm">Click "Take Photo" to capture site documentation</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
